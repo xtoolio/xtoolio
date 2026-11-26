@@ -1,0 +1,18 @@
+{{!-- Who liked this post, under it: ♥ and their FACES, yours first, up to 5, then "+N" (the line of names
+      was too long; the faces alone, a bit smaller, as on the likes page; people.postView `likedFaces`). EACH FACE IS ITS
+      OWN LINK, as Your posts' rows (partials/who-av.hbs: their People page when they have one, else their X profile; the
+      name in THE tooltip), so the pill is a container, never one button (a link can't sit inside a button). The names
+      (people.likeLine: "You, Maya and 3 others") are the line's words for a screen reader. Context: a post view with
+      `liked`, `likedFaces`, `likeable`, `youLiked`.
+      - Someone else's post, with Liking on (`likeable`): the ♥ is the button (POST /posts/:id/like): an outline heart to
+        like it on X, the filled heart to unlike it; with anyone's likes it sits in the accent pill, the faces beside it
+        (`.like-line.liked`). `on` says which way, so a double press can't toggle twice. It comes back to this post
+        (#p<id>).
+      - Otherwise the pill, when anyone is known to have liked it; nothing when nobody is. (No "Did … like it? ↻"
+        line under your own posts any more, removed: a button to ask was confusing and not that useful.)
+      Nothing at all when there's nothing to draw, not even a newline (the `~`s): the foot hides an empty slot
+      (.likes-slot:empty, app.css), so On X then starts at the text's edge. --}}
+{{#*inline "faces"}}<span class="sr-only">Liked by {{liked}}</span><span class="liked-faces">{{#each likedFaces.people}}{{> who-av person=this tip=true}}{{/each}}{{#if likedFaces.more}}<span class="liked-more" aria-hidden="true">+{{count likedFaces.more}}</span>{{/if}}</span>{{/inline~}}
+{{#if likeable}}
+  <span class="like-line{{#if liked}} liked{{/if}}"><form class="like-form" method="post" action="/posts/{{id}}/like"><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="back" value="{{@root.currentPath}}"><input type="hidden" name="on" value="{{#if youLiked}}0{{else}}1{{/if}}"><button type="submit" class="like-btn{{#if youLiked}} on{{/if}}" aria-pressed="{{#if youLiked}}true{{else}}false{{/if}}" aria-label="{{#if youLiked}}Unlike{{else}}Like{{/if}} on X">{{> icon-heart}}</button></form>{{#if liked}}{{> faces}}{{/if}}</span>
+{{else if liked}}<div class="liked">{{> icon-heart}}{{> faces}}</div>{{/if~}}

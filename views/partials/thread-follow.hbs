@@ -1,0 +1,40 @@
+{{!-- THE FOLLOW LINE (services/conversations.js followLine): who's in a group, how many you don't follow, and two
+      presses, "Follow back N"
+      (those who follow you: X's solid ink, as the Follow button says it) and "Follow N" (everyone you don't follow), each
+      capped by what X allows now (50 follows every 15 minutes, 400 a day: extras.writesLeft). FOLLOW A THREAD first (a
+      post's view, `?post=`, above its one card → POST /inbox/follow-all: everyone in a thread, or only
+      those who follow you); then the conversation's page (views/conversation.hbs, the same line above its card). Each
+      is ONE click (only a press over a whole Inbox view asks twice); no tooltip, no price on them (tooltips are for
+      explaining). Spent: a disabled "More at
+      3:42 PM" (no tooltip: it says itself). Two forms, one per press (a fetch sends a form's fields, never which
+      button was pressed). Drawn again by the route's JSON answer (views/thread-follow.hbs), swapped in by
+      public/js/post-actions.js followAll. Context: threadFollow { who { n, did }, all, back, allN, backN, left,
+      resetAt, action, fields [{ name, value }] }.
+      COMPACT (simpler, a small press at the view's top right instead of a full-width box): no box and no
+      sentence, just the presses as TEXT (THE follow
+      control's look, the accent) at the view's top right, on the back link's line; nothing at all once you follow
+      everyone who wrote (the empty element stays, hidden, for the redraw). --}}
+<div class="thread-follow" data-thread-follow{{#unless threadFollow.all}} hidden{{/unless}}>
+{{#if threadFollow}}{{#with threadFollow}}
+  {{#if all}}
+    {{!-- WHO the presses would follow, to look at first (services/conversations.js followLine `faces`):
+          those who follow you first, each opening their X profile, its
+          name in THE tooltip, then "+N". --}}
+    <span class="like-faces follow-faces">{{#each faces.people}}{{> who-av person=this tip=true}}{{/each}}{{#if faces.more}}<span class="liked-more">+{{count faces.more}}</span>{{/if}}</span>
+    {{#if left}}
+      {{#if backN}}
+      <form method="post" action="{{action}}" data-follow-all>
+        <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">{{#each fields}}<input type="hidden" name="{{name}}" value="{{value}}">{{/each}}<input type="hidden" name="only" value="back">
+        <button type="submit" class="follow-btn solid">Follow back {{count backN}}</button>
+      </form>
+      {{/if}}
+      <form method="post" action="{{action}}" data-follow-all>
+        <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">{{#each fields}}<input type="hidden" name="{{name}}" value="{{value}}">{{/each}}<input type="hidden" name="only" value="all">
+        <button type="submit" class="follow-btn">Follow {{#if (eq allN all)}}all {{/if}}{{count allN}}</button>
+      </form>
+    {{else}}
+      <button type="button" class="follow-btn" disabled>Follows: more {{#if resetAt}}at {{clock resetAt}}{{else}}tomorrow{{/if}}</button>
+    {{/if}}
+  {{/if}}
+{{/with}}{{/if}}
+</div>

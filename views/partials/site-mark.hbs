@@ -1,0 +1,9 @@
+{{!-- THE MARK: YOUR CIRCLE, the app's own picture (services/circle.js) reduced to six dots: you in the
+      middle, five faces of different sizes and slightly different distances (the circle's wobble) on a faint ring, the
+      ring cut where it meets a dot (a mask, so the cut shows whatever ground it sits on; each cut is its dot + 2). The
+      faces' sizes are 2.5× the first version's spread, the biggest then trimmed so you stay clearly the largest
+      (rendered against bolder spreads: ranked, alternating, one standout, a big you). THE ONE SHAPE: the header draws it
+      inline in the accent (currentColor; `.site-mark` in app.css), and lib/mark.js renders this same file for the tab
+      icons (one per accent) and the PNGs, passing `fill`. viewBox is the shape's own box. A second copy on a page
+      passes `key` (the mask's id must be unique on the page: the header's is the plain one). --}}
+<svg class="site-mark" viewBox="4 4 56 56" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><mask id="site-mark-cut{{#if key}}-{{key}}{{/if}}" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="#fff"/><circle cx="32" cy="12.5" r="9"/><circle cx="51.12" cy="25.79" r="6.95"/><circle cx="43.23" cy="47.45" r="9.6"/><circle cx="20.01" cy="48.5" r="7.98"/><circle cx="14.12" cy="26.19" r="9.35"/><circle cx="32" cy="32" r="10.6"/></mask><circle cx="32" cy="32" r="19.5" fill="none" stroke="{{#if fill}}{{fill}}{{else}}currentColor{{/if}}" stroke-opacity=".6" stroke-width="2.8" mask="url(#site-mark-cut{{#if key}}-{{key}}{{/if}})"/><g fill="{{#if fill}}{{fill}}{{else}}currentColor{{/if}}"><circle cx="32" cy="12.5" r="7"/><circle cx="51.12" cy="25.79" r="4.95"/><circle cx="43.23" cy="47.45" r="7.6"/><circle cx="20.01" cy="48.5" r="5.98"/><circle cx="14.12" cy="26.19" r="7.35"/><circle cx="32" cy="32" r="8.6"/></g></svg>

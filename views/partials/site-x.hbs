@@ -1,0 +1,4 @@
+{{!-- THE site's own X account (SITE_X, e.g. @xtoolio) as a link: X's logo, then the @handle. The sidebar's foot (signed
+      in: the official account, no personal credit there) and the signed-out footer's credit line. Nothing
+      when SITE_X is unset. No newline at the end. --}}
+{{#if @root.siteX}}<a class="site-x" href="https://x.com/{{@root.siteX}}" target="_blank" rel="noopener">{{> icon-x}}@{{@root.siteX}}</a>{{/if}}

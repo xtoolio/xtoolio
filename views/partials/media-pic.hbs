@@ -1,0 +1,5 @@
+{{!-- One picture of a post, a Media tile or a 📎 panel tile: a photo or a video's preview frame as an <img>; an animated
+      GIF as X's own looping MP4 (`gif`, lib/media.js sourceOf; they used to show as
+      still pictures) over that frame (`poster`). It loads and plays only while on screen, muted, never under
+      reduced motion (public/js/gifs.js); without script it's the still frame. Hash: thumb, gif, alt, width, height. --}}
+{{#if gif}}<video class="gif" src="{{gif}}" poster="{{thumb}}" muted loop playsinline preload="none" disablepictureinpicture data-gif{{#if alt}} aria-label="{{alt}}"{{/if}}{{#if width}} width="{{width}}" height="{{height}}"{{/if}}></video>{{else}}<img src="{{thumb}}" alt="{{alt}}" loading="lazy" referrerpolicy="no-referrer"{{#if width}} width="{{width}}" height="{{height}}"{{/if}}>{{/if}}

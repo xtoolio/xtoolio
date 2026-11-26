@@ -1,0 +1,14 @@
+{{!-- YOUR MEDIA, the reply box's 📎 panel's grid (GET /media/library; services/mediaLibrary.js libraryFor): every photo
+      and GIF from your own posts and the ones you saved from others (wearing their picture), your pins first. A tile
+      adds that picture to the reply (public/js/attach.js; the server fetches X's own copy as it's sent); its ☆ pins
+      it. Pictures load from X's image server, lazily. --}}
+{{#if items.length}}
+  <div class="media-grid">
+    {{#each items}}<div class="media-tile{{#if pinned}} pinned{{/if}}" data-media-key="{{key}}" data-media-type="{{type}}" data-media-thumb="{{thumb}}">
+      <button type="button" class="media-pick" data-media-pick aria-label="Add this {{#if (eq type "gif")}}GIF{{else}}photo{{/if}}">{{> media-pic alt=""}}{{#if (eq type "gif")}}<span class="media-badge">GIF</span>{{/if}}{{#if from}}<span class="media-from">{{> avatar person=from small=true}}</span>{{/if}}</button>
+      <button type="button" class="media-pin" data-media-pin aria-pressed="{{#if pinned}}true{{else}}false{{/if}}" aria-label="{{#if pinned}}Unpin{{else}}Pin to the top{{/if}}">{{#if pinned}}★{{else}}☆{{/if}}</button>
+    </div>{{/each}}
+  </div>
+{{else}}
+  <p class="media-empty">Photos and GIFs you post, and ones you save from other people’s posts, show up here to send again.</p>
+{{/if}}

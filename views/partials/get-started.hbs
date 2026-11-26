@@ -1,0 +1,6 @@
+{{!-- THE signed-out call to action (the header, the hero, the estimator's foot): "Join the waitlist" while sign-up isn't
+      open to anyone (`waitlistOn`, web.js: not ALLOWED_USERNAMES "*"), which goes to THE WAITLIST PAGE first (how
+      getting in works, then its own "Join the waitlist with X": routes/auth.js /waitlist: explained before
+      they join); else "Get started", straight to sign-in. A LINK, never a form: /auth/x redirects to
+      x.com, which the CSP's form-action 'self' would block. `sm`: the header's size. No newline at the end. --}}
+{{#if @root.waitlistOn}}<a class="signin{{#if sm}} signin-sm{{/if}}" href="/waitlist">Join the waitlist</a>{{else}}<a class="signin{{#if sm}} signin-sm{{/if}}" href="/auth/x" data-browser-tz>Get started</a>{{/if}}

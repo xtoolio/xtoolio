@@ -1,0 +1,14 @@
+{{!-- THE VIEWER (a picture or GIF opens big in a modal, to look at closely): THE modal (partials/modal.hbs,
+      class "lightbox"), drawn once by the layout on signed-in pages, filled by public/js/lightbox.js from the picture pressed (partials/media.hbs
+      .pm-open): a photo big at its original size, a press zooming it to 1:1 to read; a GIF playing (still under reduced
+      motion, with controls); a video's frame with Play on X (its file isn't stored). ← → (the buttons or the keys) step
+      through the post's other pictures. Esc, the ✕ and a click on the dark close it. --}}
+{{#> modal id="lightbox" title="Picture" class="lightbox"}}
+<div class="lightbox-stage" data-lightbox-stage></div>
+<div class="lightbox-bar">
+  <button type="button" class="btn ghost icon lightbox-prev" data-lightbox-step="-1" aria-label="Previous picture" hidden>{{> icon-chevron}}</button>
+  <span class="lightbox-n" data-lightbox-n hidden></span>
+  <button type="button" class="btn ghost icon" data-lightbox-step="1" aria-label="Next picture" hidden>{{> icon-chevron}}</button>
+  <a class="pill" data-lightbox-onx href="https://x.com" target="_blank" rel="noopener" hidden>▶ Play on X</a>
+</div>
+{{/modal}}

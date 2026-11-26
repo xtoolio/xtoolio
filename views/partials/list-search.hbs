@@ -1,0 +1,18 @@
+{{!-- A list's search and sort, one GET form (public/js/search.js submits it as you type or pick; Enter without
+      script): the search, any filter selects (the block's content), the sort, and the arrow that reverses it. A new
+      sort runs its natural way. Hash: action, placeholder, q, sorts [{ key, label, selected }], reverseHref (none: no
+      arrow; the Inbox names "Oldest" as a sort instead), dir, keep [{ name, value }] (filters in force with no select of
+      their own here, carried along), noSearch (a list driven by its filter alone: no search box, the filter first). --}}
+<form class="search-sort{{#if noSearch}} no-search{{/if}}" method="get" action="{{action}}"{{#unless noSearch}} role="search"{{/unless}}>
+  {{#each keep}}<input type="hidden" name="{{name}}" value="{{value}}">{{/each}}
+  {{#unless noSearch}}
+  <span class="search">
+    <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.06l4.24 4.23-1.42 1.42-4.23-4.24A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg>
+    <input type="search" name="q" value="{{q}}" placeholder="{{placeholder}}" aria-label="{{placeholder}}" autocomplete="off" data-live-search>
+  </span>
+  {{/unless}}
+  {{#if @partial-block}}{{> @partial-block}}{{/if}}
+  {{!-- A list with one sort has no choice to make: the arrow alone reverses it. --}}
+  {{#if sorts.[1]}}<select name="sort" aria-label="Sort" data-auto-submit>{{#each sorts}}<option value="{{key}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+  {{#if reverseHref}}<a class="btn ghost icon" href="{{reverseHref}}" data-tip="Reverse" aria-label="Reverse the order"><svg class="ico{{#if (eq dir "asc")}} flip{{/if}}" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4h2v12.2l4.6-4.6L19 13l-7 7-7-7 1.4-1.4 4.6 4.6V4Z"/></svg></a>{{/if}}
+</form>

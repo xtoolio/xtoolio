@@ -1,0 +1,11 @@
+{{!-- Where a page sits: a breadcrumb bar above its title, "Your people › Maya › This conversation". Context: the
+      trail as [{ href, label }] (web.js), ending with the page itself ({ label } with no href, shown as where you are).
+      The first step is always Your people (HOME_CRUMB) and wears THE people icon (partials/icon-people.hbs, the
+      sidebar's and the Inbox rail's Everyone); a step about someone carries
+      `person` and wears their avatar. --}}
+<nav class="crumbs" aria-label="Breadcrumb">
+  {{#each this}}
+    {{#unless @first}}<span class="crumb-sep">{{> icon-chevron}}</span>{{/unless}}
+    {{#if href}}<a href="{{href}}">{{#if @first}}{{> icon-people}}{{/if}}{{#if person}}{{> avatar person=person small=true}}{{/if}}{{label}}</a>{{else}}<span class="here" aria-current="page">{{#if person}}{{> avatar person=person small=true}}{{/if}}<span class="here-text">{{label}}</span></span>{{/if}}
+  {{/each}}
+</nav>

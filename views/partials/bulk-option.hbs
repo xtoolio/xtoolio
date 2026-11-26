@@ -1,0 +1,22 @@
+{{!-- ONE bulk-read choice, priced for this account (web.js pricedChoices): "how far back?" (partials/history-choice.hbs)
+      and the follow reconciler (views/follows-back.hbs). Either a button that POSTs `key` to `action`, or (`pick`: a
+      form's id, the start page's Get started) a radio in that form, before its label so CSS can mark the picked one
+      without :has() (iOS Safari doesn't re-check it). One the balance doesn't cover can't be chosen (the route refuses
+      it too), and beside it the ONE top-up that covers it (`topup`, billing.topupFor): a LINK, since Checkout is
+      off-site and the CSP's form-action 'self' would block a form leading there; paid, the page comes back with it
+      choosable. Context: a choice ({ key, label, price, affordable, topup, detail, selected }); hash: action | pick,
+      back (where the top-up returns), detail (when the choice has none). --}}
+{{#*inline "option-body"}}<span class="option-head"><span class="option-label">{{label}}</span><span class="option-cost">{{cost price}}</span></span>{{#if detail}}<span class="option-detail">{{detail}}</span>{{/if}}{{/inline}}
+<div class="option-row">
+  {{#if pick}}
+    <input class="option-radio" type="radio" id="option-{{key}}" name="key" value="{{key}}" form="{{pick}}"{{#if selected}} checked{{/if}}{{#unless affordable}} disabled{{/unless}}>
+    <label class="option" for="option-{{key}}">{{> option-body}}</label>
+  {{else}}
+    <form method="post" action="{{action}}" data-busy>
+      <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+      <input type="hidden" name="key" value="{{key}}">
+      <button type="submit" class="option"{{#unless affordable}} disabled{{/unless}}>{{> option-body}}</button>
+    </form>
+  {{/if}}
+  {{#if topup}}{{#if @root.funds.payable}}<a class="pill option-add" href="/billing/topup?amount={{topup}}&amp;back={{back}}">Add ${{topup}} for this</a>{{/if}}{{/if}}
+</div>

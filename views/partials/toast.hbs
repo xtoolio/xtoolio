@@ -1,0 +1,19 @@
+{{!-- THE toast: what the redirect that led here left behind (?n=<key> → lib/notices.js → res.locals.toast, rendered
+      once by the layout). It fades by itself (CSS only, no script needed); an error stays until dismissed.
+      public/js/toast.js wires the ✕ and drops ?n= (and ?u=) from the address, so a reload doesn't show it again.
+      `undo`: a Done press's undo token (models/InboxUndo.js; ?u=, or the JSON answer's `undo` for a toast from script):
+      an Undo button, POST /inbox/undo, back to this page (every Done has an Undo in its
+      toast); it stays a little longer. The layout's <template> copy is drawn with undo="-" so the script has the form
+      to fill (public/js/toast.js xtoolioToast), and drops it when there's nothing to undo. `kind` "limit" (X refused
+      a write for its limit) looks like an error and is marked `data-limit`: public/js/limits.js drops the header's
+      stopwatch open for it. --}}
+<div class="toast{{#if (or (eq kind "error") (eq kind "limit"))}} error{{/if}}{{#if undo}} has-undo{{/if}}" role="{{#if (or (eq kind "error") (eq kind "limit"))}}alert{{else}}status{{/if}}" data-toast{{#if (eq kind "limit")}} data-limit{{/if}}>
+  <span>{{text}}</span>
+  {{#if undo}}<form class="toast-undo" method="post" action="/inbox/undo" data-busy data-toast-undo>
+    <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+    <input type="hidden" name="u" value="{{undo}}">
+    <input type="hidden" name="back" value="{{@root.currentPath}}">
+    <button type="submit" class="toast-undo-btn">Undo</button>
+  </form>{{/if}}
+  <button type="button" class="toast-x" aria-label="Dismiss" data-toast-close><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z"/></svg></button>
+</div>

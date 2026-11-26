@@ -1,0 +1,131 @@
+{{!-- The signed-out front page: what it does, how it works, what it costs you (one estimator), and that's it
+      (technical and transparent about pricing, with as few numbers as will do). Every
+      number comes from lib/pricing.js and config through services/estimateView.js (landingView, moduleEstimate), so
+      the page can't drift from what billing charges. The pricing parts show only where the
+      site charges (`charges` = billing on): on a self-hosted copy with billing off they'd be untrue.
+      Layout (one column wasted a laptop's width): on a wide screen the hero is the pitch and its use
+      cases beside the tour's pages; under 900px it's one column. Below it, where the site charges, the module picker
+      (Settings' panel). --}}
+<section class="landing">
+  {{!-- THE TOUR (a very simple carousel of the app's real pages, drawn, beside plain, concrete use
+        cases; no extra sub-text): under "Use cases", one short line each, a LABEL for
+        one radio that shows its screen beside it (CSS only: it works without script; public/js/tour.js only moves to the
+        next one every few seconds until a visitor picks one, never under reduced motion). Each screen is the desktop
+        app as it is, scaled down like a screenshot: the real sidebar (routes/pages.js tourWithNav, its place lit) beside the
+        page, one invented account drawn by the real partials (services/demo.js demoTour), in either theme. `inert`:
+        nothing in them can be pressed or focused. --}}
+  <div class="landing-hero tour" data-tour>
+    {{#each tourCases}}<input type="radio" class="tour-pick" name="tour" id="tour-{{key}}" value="{{key}}"{{#if @first}} checked{{/if}}>{{/each}}
+    <div class="landing-pitch">
+      {{!-- The story (people live on X, and it's more than a replies inbox; it was "Your X replies, as
+            an inbox."). --}}
+      <h1>Built for X creators &amp; <em>power users</em>.</h1>
+      <h2 class="tour-head">Use cases</h2>
+      <ul class="tour-cases">
+        {{#each tourCases}}<li><label for="tour-{{key}}">{{title}}</label></li>{{/each}}
+      </ul>
+    </div>
+
+    <div class="tour-slides" inert>
+      {{#with tour}}
+      <div class="tour-slide" data-slide="inbox"><div class="tour-screen"><div class="tour-app">{{> side-nav nav=nav.inbox drawn=true}}<div class="tour-page">
+        <header class="page-head"><h1>Inbox</h1></header>
+        <div class="list-head"><nav class="seg-tabs"><a class="on">Waiting <span class="seg-n">{{inbox.length}}</span></a><a>Done <span class="seg-n">41</span></a><a>All <span class="seg-n">43</span></a></nav></div>
+        <div class="toolbar tour-toolbar"><span class="btn like-all-btn">{{> icon-heart}}<span>Like {{toolbar.like}}</span></span><span class="btn done-btn">Mark {{toolbar.done}} replies done</span></div>
+        <div class="threads">{{#each inbox}}{{> thread inboxCard=true}}{{/each}}</div>
+      </div></div></div></div>
+      {{!-- BULK LIKE, drawn at the moment of the press: the toolbar's "♥ Like N" ARMED, saying "Click again to like N"
+            (THE click-again confirm: public/js/confirm.js sets .armed, app.css draws data-confirm beside it). --}}
+      <div class="tour-slide" data-slide="like"><div class="tour-screen"><div class="tour-app">{{> side-nav nav=nav.inbox drawn=true}}<div class="tour-page">
+        <header class="page-head"><h1>Inbox</h1></header>
+        <div class="list-head"><nav class="seg-tabs"><a class="on">Waiting <span class="seg-n">1</span></a><a>Done <span class="seg-n">41</span></a><a>All <span class="seg-n">42</span></a></nav></div>
+        <div class="toolbar tour-toolbar"><span class="btn like-all-btn armed" data-confirm="Click again to like {{thread.toolbar.like}}">{{> icon-heart}}<span>Like {{thread.toolbar.like}}</span></span><span class="btn done-btn">Mark {{thread.toolbar.done}} replies done</span></div>
+        <div class="threads">{{#with thread.row}}{{> thread inboxCard=true}}{{/with}}</div>
+      </div></div></div></div>
+      <div class="tour-slide" data-slide="thread"><div class="tour-screen"><div class="tour-app">{{> side-nav nav=nav.inbox drawn=true}}<div class="tour-page">
+        <header class="page-head"><h1>Inbox</h1></header>
+        {{> thread-follow threadFollow=thread.follow}}
+        <div class="threads">{{#with thread.row}}{{> thread inboxCard=true}}{{/with}}</div>
+      </div></div></div></div>
+      <div class="tour-slide" data-slide="follows"><div class="tour-screen"><div class="tour-app">{{> side-nav nav=nav.follows drawn=true}}<div class="tour-page">
+        <header class="page-head"><h1>Follows</h1></header>
+        <div class="list-head"><nav class="seg-tabs"><a class="on">Recent</a><a>Followed you</a><a>Unfollowed you</a><a>Not following back</a><a>Who they tag</a></nav></div>
+        <ol class="pcards rows">{{#each follows}}{{> follow-card}}{{/each}}</ol>
+      </div></div></div></div>
+      <div class="tour-slide" data-slide="back"><div class="tour-screen"><div class="tour-app">{{> side-nav nav=nav.follows drawn=true}}<div class="tour-page">
+        <header class="page-head"><h1>Follows</h1></header>
+        <div class="list-head"><nav class="seg-tabs"><a>Recent</a><a>Followed you</a><a>Unfollowed you</a><a class="on">Not following back</a><a>Who they tag</a></nav></div>
+        <div class="toolbar tour-toolbar"><span class="muted">Under 1,000 followers</span><span class="pill danger">Unfollow {{notBack.length}} selected</span></div>
+        <ol class="pcards rows">{{#each notBack}}{{> follow-card}}{{/each}}</ol>
+      </div></div></div></div>
+      {{!-- WHO THEY TAG (views/follows-tags.hbs), drawn after a read: whose posts, the people they tag most, picked, and
+            the bulk follow about to be pressed. --}}
+      <div class="tour-slide" data-slide="tags"><div class="tour-screen"><div class="tour-app">{{> side-nav nav=nav.follows drawn=true}}<div class="tour-page">
+        <header class="page-head"><h1>Follows</h1></header>
+        <div class="list-head"><nav class="seg-tabs"><a>Recent</a><a>Followed you</a><a>Unfollowed you</a><a>Not following back</a><a class="on">Who they tag</a></nav></div>
+        <p class="tags-who">{{> avatar person=tags.by small=true}}<span><b>@{{tags.by.username}}</b> tags {{tags.rows.length}} accounts in {{tags.posts}} posts</span></p>
+        <div class="toolbar tour-toolbar"><span class="muted">Most tagged</span><span class="pill">Follow {{tags.rows.length}} selected</span></div>
+        <ol class="pcards rows">{{#each tags.rows}}{{> follow-card}}{{/each}}</ol>
+      </div></div></div></div>
+      <div class="tour-slide" data-slide="people"><div class="tour-screen"><div class="tour-app">{{> side-nav nav=nav.people drawn=true}}<div class="tour-page">
+        <header class="page-head"><h1>Your people</h1></header>
+        <ol class="pcards rows">{{#each board}}{{> person-card}}{{/each}}</ol>
+      </div></div></div></div>
+      <div class="tour-slide" data-slide="circle"><div class="tour-screen"><div class="tour-app">{{> side-nav nav=nav.circle drawn=true}}<div class="tour-page">
+        <header class="page-head"><h1>Your circle</h1></header>
+        {{!-- As views/circle.hbs draws it once shared: THE SIZES over the circle (at 250), beside "Share it" (the public
+              link, Post on X, the picture, the top 50 handles). --}}
+        <div class="circle-page">
+          <div class="circle-main"><div class="seg-tabs circle-sizes">{{#each circle.sizes}}<button type="button"{{#if on}} class="on"{{/if}}>{{key}}</button>{{/each}}</div>{{> circle circle}}</div>
+          <aside class="panel circle-share">
+            <div class="circle-share-head"><div><h2>Share it</h2><p class="fine">A public page with this circle on it. Anyone with the link can see it.</p></div></div>
+            <p class="circle-link"><a href="/">{{@root.siteDomain}}/@you</a><span class="copy-handle">{{> icon-copy}}</span></p>
+            <div class="circle-actions"><a class="pill" href="/">Post on X</a><a class="btn" href="/">Download picture</a><span class="btn">Copy {{#if circle.handlesTop}}the top{{else}}all{{/if}} {{circle.handlesN}} handles</span></div>
+          </aside>
+        </div>
+      </div></div></div></div>
+      {{/with}}
+    </div>
+    {{!-- THE call to action (partials/get-started.hbs: "Join the waitlist" while sign-up is closed; public/js/timezone.js
+          adds ?tz=). AFTER the screens in the markup, so a phone reads headline, use cases, the screen, then the button;
+          on a wide screen the grid puts it under the use cases. No pricing in the hero (pricing is
+          below). --}}
+    {{!-- Beside it, while it's true (`dms`, routes/pages.js): who tells you you're in ("@xtoolio will DM you when
+          you're in"). --}}
+    <div class="signin-row hero-go">{{> get-started}}{{#if dms}}<span class="paygo"><a href="https://x.com/{{siteX}}" target="_blank" rel="noopener">@{{siteX}}</a> will DM you when you’re in</span>{{/if}}</div>
+  </div>
+
+  {{!-- "What it does" and "How it works" were removed as noise: the hero
+        shows what it does, the picker what it costs and what you can turn on. --}}
+  {{#if charges}}
+  {{!-- PAY AS YOU GO is ONE TABLE (the estimator and the prices combined, the estimator its first row;
+        it replaced a price table above the estimator, whose columns never lined up with it): the module picker
+        (partials/module-picker.hbs, services/estimateView.js moduleEstimate), titled "Pay as you go" here, its switches
+        what-ifs, the per-item prices at its foot (services/estimateView.js landingView). Getting started turns
+        everything on (the start page). --}}
+  {{!-- Its call to action is the FOOTER's (layouts/main.hbs, `footGo`): last on the page, after the code. --}}
+  {{#> module-picker measure=true}}
+    {{> byo-agent}}
+  {{/module-picker}}
+
+  {{!-- The code is public (SOURCE_REPO_URL): a trust signal for the hosted product, not a second offer. Installing it
+        is the README's job, never this page's. The link is drawn as the line a developer types for a repository
+        ("$ git clone https://…", runnable as written; "$ open …", a macOS command, read as decoration), a cursor
+        blinking at its end (still under reduced motion), the whole line the link (it opens the repository). --}}
+  {{!-- IN BETA (config.beta): the code isn't offered yet; this says when, in one line where the code will be. --}}
+  {{#if beta}}
+    <div class="landing-code">
+      <h2 class="section">The code</h2>
+      <p class="note">Public, and yours to self-host, after the beta.</p>
+    </div>
+  {{else if sourceRepoUrl}}
+    <div class="landing-code">
+      <h2 class="section">The code is public</h2>
+      <a class="code-term" href="{{sourceRepoUrl}}" target="_blank" rel="noopener"><span class="code-prompt" aria-hidden="true">$</span>git clone <span class="code-path">{{sourceRepoLabel}}</span><span class="code-caret" aria-hidden="true"></span></a>
+    </div>
+  {{/if}}
+  {{else}}
+  {{!-- A self-hosted copy (no prices, no estimator): the same small section, at the foot. --}}
+  {{> byo-agent}}
+  {{/if}}
+</section>

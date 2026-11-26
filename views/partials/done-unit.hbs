@@ -1,0 +1,6 @@
+{{!-- "11 posts" / "2 replies": what the Inbox toolbar's Done (and its question's button) marks, in the rail view's
+      unit (routes/inbox.js `doneUnit`: the People view counts the replies still waiting, a person's theirs; the Posts view the
+      cards, posts). The number and the word
+      move together as the page changes (post-actions.js: data-count + data-plural on `doneUnit.key`). No newline at the
+      end. --}}
+<span data-count="{{@root.doneUnit.key}}">{{count @root.doneUnit.n}}</span> <span data-plural="{{@root.doneUnit.key}}" data-one="{{@root.doneUnit.one}}" data-many="{{@root.doneUnit.many}}">{{#if (eq @root.doneUnit.n 1)}}{{@root.doneUnit.one}}{{else}}{{@root.doneUnit.many}}{{/if}}</span>

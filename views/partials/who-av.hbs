@@ -1,0 +1,6 @@
+{{!-- Someone's picture as a link (posts, the chat): to their People page when they have one (`person.page`, from
+      people.postView), else to their X profile. Hash: person ({ id, username, profile, page }); `tip`: their name in
+      THE tooltip (data-tip, at once, above the face) where the face stands alone with no name beside it (the Likes
+      rows); beside a name, only a label for screen readers (the name is right there). Above a post's
+      open-on-X layer, like every link in a post. No newline at the end. --}}
+{{#if person.page}}<a class="who-av" href="{{person.page}}" {{#if tip}}data-tip="{{displayName person}}" aria-label="{{displayName person}}"{{else}}aria-label="{{displayName person}} in {{@root.brandName}}"{{/if}}>{{> avatar person=person}}</a>{{else if person.username}}<a class="who-av" href="https://x.com/{{person.username}}" target="_blank" rel="noopener" {{#if tip}}data-tip="{{displayName person}}" aria-label="{{displayName person}} on X"{{else}}aria-label="@{{person.username}} on X"{{/if}}>{{> avatar person=person}}</a>{{else}}{{> avatar person=person}}{{/if}}

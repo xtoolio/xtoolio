@@ -1,0 +1,34 @@
+{{!-- One chat message (a conversation, an Inbox card, the bubble a sent reply comes back as). Under it THE POST FOOT
+      (partials/post-foot.hbs: ♥ · ↻ · Reply · On X, and the composer: a reply opens right below the
+      message it answers, not in one box at the card's foot; your answer lands right under it, as people.chatOrder
+      draws it on reload). The composer is a <dialog>: shown in place under the message on a wide screen, a
+      full-screen sheet on a phone (post-actions.js; see reply-box.hbs). `data-reply-of`: what it
+      answers (anyone's), so a new answer of yours is placed after your earlier ones, and a message's Done folds your
+      answers to it unless a waiting message answers them. `ruleBefore` (people.chatOrder): a thin line opens
+      each new message of someone else's, so every exchange reads as its own block. `owes` (an Inbox card's message
+      in view, services/inbox.js): the like and the reply it still has coming from you, which the rail counts
+      (data-owed-by + data-owe-like / data-owe-reply; post-actions.js moves the rail as you like and answer).
+      THE CORNER (.post-corner, pinned to the message's top right, level with its header): "Mark done" (top right,
+      not bottom right), alone there (the arrow to X it once stood beside became the foot's
+      On X); drawn only when there's one. Mark done on each message still waiting in an Inbox card
+      (`doneIn`, services/inbox.js: a Done on each message that folds just that message): POST /inbox/done
+      with `handled` = this message, THE message-level mark; post-actions.js
+      `doneMsg` folds just it, and the card too once nothing in it waits. A PRESS says "Mark done" and only the
+      finished state says "✓ Done" ("Done" on both, differing only by background, was confusing).
+      `has-done` on the message makes room for the wider corner beside its header (or a header-less
+      one's text). --}}
+{{!-- In a card with a fold (people.foldChat): `folded` hides it while the fold is shut; `ruleWhen` / `headWhen` /
+      `joinWhen` / `answerWhen` draw the line, the who-and-when, THE THREAD LINE (`joinsNext`: the next message answers
+      this one) or "Replying to" (`answering`: whom it answers, when that isn't the message right above) for one state
+      only ("open" | "shut"), app.css .fold-toggle. --}}
+{{#if ruleBefore}}<hr class="msg-rule{{#if folded}} folded{{/if}}{{#if ruleWhen}} when-{{ruleWhen}}{{/if}}">{{/if}}
+<div class="msg {{side}}{{#if runStart}} run-start{{/if}}{{#if joinsNext}} joins-next{{/if}}{{#if joinWhen}} join-when-{{joinWhen}}{{/if}}{{#if folded}} folded{{/if}}{{#if headWhen}} head-when-{{headWhen}}{{/if}}{{#if (or doneIn finished)}} has-done{{/if}}" id="p{{id}}"{{#if replyOf}} data-reply-of="{{replyOf}}"{{/if}}{{#if owes}} data-owed-by="{{author.id}}"{{#if owes.like}} data-owe-like{{/if}}{{#if owes.reply}} data-owe-reply{{/if}}{{/if}}>
+  {{#if (or doneIn finished)}}<div class="post-corner">{{#if doneIn}}<form class="msg-done" method="post" action="/inbox/done" data-done-msg><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="back" value="{{@root.currentPath}}"><input type="hidden" name="conversationId" value="{{doneIn}}"><input type="hidden" name="handled" value="{{id}}"><input type="hidden" name="on" value="1"><button type="submit" class="reply-to msg-done-btn">Mark done</button></form>{{else}}<span class="msg-finished">✓ Done</span>{{/if}}</div>{{/if}}
+  <span class="msg-av">{{#if runStart}}{{> who-av person=author}}{{/if}}</span>
+  <div class="msg-col">
+    {{#if runStart}}<div class="msg-meta">{{#if fromMe}}<span class="msg-name">You</span>{{else}}{{> post-who}}{{/if}} <span class="msg-dot">·</span> <time class="post-time" datetime="{{createdAt}}">{{rel createdAt}}</time>{{#unless fromMe}}{{> follow-inline}}{{/unless}}</div>{{/if}}
+    {{#if answering}}<p class="msg-answering{{#if answerWhen}} when-{{answerWhen}}{{/if}}">Replying to {{displayName answering}}</p>{{/if}}
+    <div class="bubble">{{#if gone}}<span class="gone">This post isn't available on X.</span>{{else}}<div class="text">{{> segments}}</div>{{#if media.length}}{{> media}}{{/if}}{{#if quoted}}{{> quote quoted}}{{/if}}{{/if}}</div>
+    {{> post-foot}}
+  </div>
+</div>

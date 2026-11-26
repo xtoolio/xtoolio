@@ -1,0 +1,6 @@
+{{!-- THE OWED TABLE (services/inbox.js owedModel): every message still owed a like or a reply, for
+      public/js/post-actions.js to compute every number about what's owed the moment you press (the rail, the head, People
+      | Posts, Done N replies, each bulk ♥'s N and which messages it takes), never waiting for the server to recount.
+      Context: owedModel { entries, person, post (the view's own, the toolbar's scope), allow (X's like window:
+      writesLeft) , max (LIKE_ALL_MAX) }. --}}
+{{#with owedModel}}<div hidden data-owed-model data-owed="{{json entries}}" data-person="{{person}}" data-post="{{post}}"{{#if allow}} data-left="{{allow.left}}" data-ends="{{allow.windowEnds}}" data-after="{{allow.afterReset}}"{{/if}} data-max="{{max}}"></div>{{/with}}

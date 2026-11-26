@@ -1,0 +1,4 @@
+{{!-- Someone's @handle, the same everywhere a person shows (always both the name and the handle):
+      a link to them on X, and beside it a button that copies "@handle" for a search (public/js/copy.js). Hash:
+      username. Sits above a post's open-on-X layer (.post-open), so it's its own click. No newline at the end. --}}
+<span class="handle-wrap"><a class="handle-link" href="https://x.com/{{username}}" target="_blank" rel="noopener">@{{username}}</a><button type="button" class="copy-handle" data-copy="@{{username}}" aria-label="Copy @{{username}}">{{> icon-copy}}</button></span>

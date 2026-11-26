@@ -1,0 +1,11 @@
+{{!-- A list's pages (services/listing.js pager): Prev, the pages around this one with gaps, Next, each with THE drawn
+      arrow (partials/icon-back.hbs). Context: the pager object. Nothing when everything fits on one page. --}}
+{{#if many}}
+  <nav class="pager" aria-label="Pages">
+    {{#if prevHref}}<a class="pg" href="{{prevHref}}" rel="prev">{{> icon-back}}Prev</a>{{else}}<span class="pg off">{{> icon-back}}Prev</span>{{/if}}
+    {{#each links}}
+      {{#if gap}}<span class="pg gap">…</span>{{else}}<a class="pg{{#if current}} on{{/if}}" href="{{href}}"{{#if current}} aria-current="page"{{/if}}>{{page}}</a>{{/if}}
+    {{/each}}
+    {{#if nextHref}}<a class="pg" href="{{nextHref}}" rel="next">Next{{> icon-back flip=true}}</a>{{else}}<span class="pg off">Next{{> icon-back flip=true}}</span>{{/if}}
+  </nav>
+{{/if}}

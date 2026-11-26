@@ -1,0 +1,32 @@
+{{!-- One conversation as a card: the seed (the posts it hangs on, X's way), a divider, then the dialogue as chat.
+      Context: { id (the conversation), topic: [post views], chat: [post views + side, runStart] (the dialogue as
+      drawn), fold (optional), note (optional: why it's here, above the chat: the Inbox's "Mentioned you in a reply to
+      …") } (people.threads, inbox.inboxRows). Used as a block, its content goes at the card's foot. Each post's On X
+      (post-foot.hbs) is its one way to X; a seed that isn't the thread's first post says nothing about what's
+      above it (its On X opens it on X, which shows the thread). --}}
+{{#*inline "foldRow"}}<div class="fold-row{{#if fold.top}} fold-above{{/if}}"><label class="fold-label" for="fold-{{id}}"><span class="if-closed">Show</span><span class="if-open">Hide</span> <span data-fold-n>{{fold.n}}</span> {{fold.word}} <span data-fold-word>{{#if (eq fold.n 1)}}reply{{else}}replies{{/if}}</span></label>{{#if drill}}<a class="drill" href="{{drill}}">Only this post {{> icon-chevron}}</a>{{/if}}</div>{{/inline}}
+{{!-- The card's note ("Mentioned you"): above the chat, or in the band's left when there's no seed (inbox-done.hbs). --}}
+{{#*inline "noteLine"}}<p class="thread-note">{{note}}</p>{{/inline}}
+{{!-- `boxed` (an Inbox card, or a conversation page drawn without one: views/conversation.hbs) is THE LOOK: the seed as
+      the post box, the card's spacing, no rules around it. `inboxCard` adds the Inbox's behaviour (data-inbox-card, the
+      presses), so a page with no card looks the same and acts as what it is. --}}
+<section class="thread{{#if (or inboxCard boxed)}} boxed{{/if}}{{#if (eq status "done")}} done{{/if}}"{{#if inboxCard}} data-inbox-card data-conversation="{{conversationId}}"{{/if}}>
+  {{!-- An Inbox card's header is its seed (the last post of the topic, the one the conversation hangs on: `head`), the
+        card's presses in its corner; with no seed, a band carries them (partials/inbox-done.hbs). --}}
+  {{#if inboxCard}}{{#unless topic.length}}{{> inbox-done}}{{/unless}}{{/if}}
+  {{!-- THE THREAD ABOVE (inbox.threadAbove): the posts the seed answers sit above it in the box, X's way, joined by the
+        thread line; a long one shows its first and last, the middle behind THE FOLD's checkbox (`topicFold`, the posts
+        `folded`), its label right under the first. --}}
+  {{#if topic.length}}
+    <div class="seed{{#if (or inboxCard boxed)}} card-seed{{/if}}">
+      {{#if topicFold}}<input type="checkbox" class="fold-toggle" id="above-{{id}}">{{/if}}
+      {{#each topic}}{{#if @last}}{{#if ../inboxCard}}{{> topic-post head=../this}}{{else}}{{> topic-post}}{{/if}}{{else}}{{> topic-post}}{{/if}}{{#if @first}}{{#if ../topicFold}}<div class="fold-row seed-fold"><label class="fold-label" for="above-{{../id}}"><span class="if-closed">Show</span><span class="if-open">Hide</span> {{../topicFold.n}} more {{#if (eq ../topicFold.n 1)}}reply{{else}}replies{{/if}}</label></div>{{/if}}{{/if}}{{/each}}
+    </div>
+  {{/if}}
+  {{!-- THE FOLD (people.foldChat): the chat is drawn whole, in its order, and the fold only hides some of it (done,
+        someone else's in a person's view, past a long card's first few), so opening it shows every reply where it
+        belongs. A checkbox and CSS (app.css .fold-toggle), so it opens without script; its label sits above the chat,
+        or below it when only the tail is folded, beside "Only this post" (`drill`, the card alone). --}}
+  {{#if (or chat.length note)}}<div class="dialogue">{{#if note}}{{#if inboxCard}}{{#if topic.length}}{{> noteLine}}{{/if}}{{else}}{{> noteLine}}{{/if}}{{/if}}{{#if fold}}<input type="checkbox" class="fold-toggle" id="fold-{{id}}" data-fold{{#if fold.open}} checked{{/if}}>{{#if fold.top}}{{> foldRow}}{{/if}}{{/if}}<div class="chat">{{#each chat}}{{> bubble}}{{/each}}</div>{{#if fold}}{{#unless fold.top}}{{> foldRow}}{{/unless}}{{/if}}</div>{{/if}}
+  {{#if @partial-block}}{{> @partial-block}}{{/if}}
+</section>

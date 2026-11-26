@@ -1,0 +1,21 @@
+{{!-- THE USAGE CHART (services/spendChart.js; views/usage.hbs): money per day, week or month as bars. The switch is three
+      radios before everything they show (CSS picks the panel: it works without script); each panel says its current
+      bucket (Today, This week, the month) and its window's total above the bars, and the bucket under the pointer
+      instead while one is (public/js/usage.js; every bar also has its native tooltip). The bars are SVG on a 1-unit slot
+      grid stretched to the width (preserveAspectRatio="none"); the labels are HTML, so they keep their size. --}}
+<section class="spend" aria-label="Spending">
+  {{#each panels}}<input class="spend-by" type="radio" name="spend-by" id="spend-by-{{key}}"{{#if @first}} checked{{/if}}>{{/each}}
+  <div class="seg-tabs spend-tabs">{{#each panels}}<label for="spend-by-{{key}}" class="spend-tab-{{key}}">{{label}}</label>{{/each}}</div>
+  {{#each panels}}
+    <div class="spend-panel spend-{{key}}" data-spend>
+      <p class="spend-readout" aria-live="polite"><span data-spend-rest><b>{{now.label}} {{#if now.estimated}}~{{/if}}{{money now.micros}}</b> <span class="muted">· {{span.label}} {{#if span.estimated}}~{{/if}}{{money span.micros}}</span></span><b data-spend-say hidden></b></p>
+      <div class="spend-plot">
+        <span class="spend-peak">{{money peak}}</span>
+        <svg viewBox="0 0 {{n}} 100" preserveAspectRatio="none" role="img" aria-label="{{span.label}}: {{money span.micros}}">
+          {{#each bars}}<g class="spend-slot" data-say="{{label}} · {{#if estimated}}~{{/if}}{{money micros}}{{#if estimated}} (estimate){{/if}}"><title>{{label}}: {{#if estimated}}~{{/if}}{{money micros}}</title><rect class="spend-hit" x="{{slot}}" y="0" width="1" height="100"/>{{#if h}}<rect class="spend-bar{{#if estimated}} est{{/if}}" x="{{x}}" y="{{y}}" width="{{w}}" height="{{h}}"/>{{/if}}</g>{{/each}}
+        </svg>
+      </div>
+      <div class="spend-axis" aria-hidden="true">{{#each bars}}<span>{{axis}}</span>{{/each}}</div>
+    </div>
+  {{/each}}
+</section>

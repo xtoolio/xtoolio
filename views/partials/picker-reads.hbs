@@ -1,0 +1,7 @@
+{{!-- A module picker row's ASSUMPTIONS (partials/module-picker.hbs: each module, and What you send): the numbers a day
+      it rests on, two columns that line up down the whole table: what it is, and the number (`per`: a dropdown that
+      re-prices on change; `measured`: X's figure for a handle). `reads` [{ label, per?, measured? }]. Nothing derived
+      (just rows of switches and assumptions). --}}
+{{#if reads.length}}<dl class="reads">
+  {{#each reads}}<div><dt>{{label}}</dt><dd class="read-per">{{#with per}}<select name="{{name}}" aria-label="{{words}}" data-auto-submit>{{#each options}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{value}}</option>{{/each}}</select> a day{{else}}{{count measured}} a day{{/with}}</dd></div>{{/each}}
+</dl>{{/if}}

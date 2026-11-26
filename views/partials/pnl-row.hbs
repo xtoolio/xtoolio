@@ -1,0 +1,16 @@
+{{!-- One row of Admin → P&L (views/admin.hbs; services/pnl.js), THE LIST ROW's look in the admin rows' grammar
+      (.adm-row) and THE FIGURES ROW's columns (.fig-row, shared with Admin → Activity): who (partials/adm-who.hbs; or
+      `label` for the Total row and the platform's), then the five figures in fixed columns, under the column heads (a phone
+      too: one line of figures under the name). `row`: { deposited, balance, charged, margin, marginPct }; `isTotal`: the bold
+      first row, tinted (not `total`: inside admin.hbs' {{#with pnl}} that name is the month's totals, and a hash missing
+      it falls through to them). `summary`: the row is the <summary> of a fold (Site costs, views/admin.hbs), wearing a
+      chevron after its label; `sub`: a row inside that fold. `row.status` ({ label, tone }, this month only,
+      routes/admin.js statusOf): where that account's syncing stands NOW, after its name. No newline at the end. --}}
+<{{#if summary}}summary{{else}}div{{/if}} class="adm-row fig-row pnl-row{{#if isTotal}} total{{/if}}{{#if sub}} sub{{/if}}">
+  {{#if person}}{{> adm-who person=person status=row.status}}{{else}}<div class="adm-who"><span class="adm-name">{{#if isTotal}}<b>{{label}}</b>{{else}}<span class="muted">{{label}}</span>{{/if}}{{#if summary}}{{> icon-chevron}}{{/if}}</span></div>{{/if}}
+  <span class="n">{{#if row.deposited}}{{money row.deposited}}{{else}}<span class="muted">–</span>{{/if}}</span>
+  <span class="n">{{#if row.balance}}{{money row.balance}}{{else}}<span class="muted">–</span>{{/if}}</span>
+  <span class="n">{{#if row.charged}}{{money row.charged}}{{else}}<span class="muted">–</span>{{/if}}</span>
+  <span class="n">{{#if row.margin}}{{money row.margin true}}{{else}}<span class="muted">–</span>{{/if}}</span>
+  <span class="n">{{#if (eq row.marginPct null)}}<span class="muted">–</span>{{else}}{{row.marginPct}}%{{/if}}</span>
+</{{#if summary}}summary{{else}}div{{/if}}>

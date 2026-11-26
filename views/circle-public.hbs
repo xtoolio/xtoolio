@@ -1,0 +1,8 @@
+{{!-- A PUBLIC circle (/@<username>; routes/people.js publicCircle): someone turned sharing on (People → Your circle).
+      Their circle (each picture opens that person on X; they're the face in the middle) and a way to make your own. No
+      "…'s circle" heading (noise when posted on X). Its preview on X is the share
+      image (services/circleImage.js, the layout's og:image from `meta`). Nobody's posts are shown: just who. --}}
+<div class="circle-public">
+  {{> circle circle}}
+  <p class="circle-public-foot"><a class="pill" href="/">Make yours on {{siteDomain}}</a></p>
+</div>

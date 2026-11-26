@@ -1,0 +1,12 @@
+{{!-- THE modal: a native <dialog> (Esc, focus and the backdrop come with it). Any element with data-modal-open="<id>"
+      opens it (public/js/modal.js); the ✕ is a method="dialog" form, so it closes without script; a click on the
+      backdrop closes it too. Use it as a block: {{#> modal id="all-done" title="Mark all done?"}}…content…{{/modal}}
+      Restored for the Inbox's "Mark all done" (it was the font preview's until that went). `class` (optional)
+      dresses one use differently: "lightbox", THE VIEWER (partials/lightbox.hbs). --}}
+<dialog class="modal{{#if class}} {{class}}{{/if}}" id="{{id}}" aria-labelledby="{{id}}-title">
+  <div class="modal-head">
+    <h2 class="modal-title" id="{{id}}-title">{{title}}</h2>
+    <form method="dialog"><button class="btn ghost icon" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z"/></svg></button></form>
+  </div>
+  <div class="modal-body">{{> @partial-block}}</div>
+</dialog>

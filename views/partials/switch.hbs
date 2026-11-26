@@ -1,0 +1,9 @@
+{{!-- An on/off switch (Circle's sharing, a module-off page's switch, Settings' Auto-refill: each route builds its own
+      `toggle`). Context: { on, label, action, field?, back? } posts to `action` (with an optional
+      hidden { name, value }, and `back`: where the route lands after); { on, label, link } is a LINK instead, for turning on something that first goes off-site
+      (X's permission screen, Stripe's card page: the CSP's form-action 'self' blocks a form leading there). --}}
+{{#if link}}
+  <a class="switch{{#if on}} on{{/if}}" href="{{link}}" role="switch" aria-checked="{{#if on}}true{{else}}false{{/if}}" aria-label="{{label}}"></a>
+{{else}}
+  <form method="post" action="{{action}}"><input type="hidden" name="_csrf" value="{{@root.csrfToken}}">{{#if field}}<input type="hidden" name="{{field.name}}" value="{{field.value}}">{{/if}}{{#if back}}<input type="hidden" name="back" value="{{back}}">{{/if}}<button type="submit" class="switch{{#if on}} on{{/if}}" role="switch" aria-checked="{{#if on}}true{{else}}false{{/if}}" aria-label="{{label}}"></button></form>
+{{/if}}

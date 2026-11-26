@@ -1,0 +1,53 @@
+{{!-- Follows → Who they tag (/follows/tags; routes/tagged.js, services/tagged.js). Type a handle and read their recent
+      posts (ONE priced press, on its button, never charged past it); then the accounts those posts @-tag, most tagged
+      first, as Follows rows (partials/follow-card.hbs, kind "tagged"), people you already follow left out unless asked,
+      and THE BULK FOLLOW of the picked ones (routes/pages.js followMany: X's 50 per 15 minutes, 400 a day; one
+      click: you picked them). The handle box is the front page's (.estimate-handle). Earlier reads (30 days) open again
+      for free under it. Context: handle, read, reads, choice, list, picking, pickForm, followMax, followLeft. --}}
+<header class="page-head">
+  <div class="head-row"><h1>Follows</h1>{{> page-switch headSwitch}}</div>
+  {{#unless canFollow}}<p class="note"><a href="/auth/x">Sign in with X again</a> to follow from here.</p>{{/unless}}
+</header>
+
+{{#with head}}{{> follows-head}}{{/with}}
+
+<section class="panel bulk-read">
+  <p class="bulk-read-line"><b>Who do they tag?</b> Read someone’s last {{readPosts}} posts and follow the people they point to.</p>
+  <form class="estimate-handle" method="post" action="/follows/tags/read" data-busy>
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    <div class="handle-box"><input type="text" name="handle" value="{{#if handle}}@{{handle}}{{/if}}" placeholder="@handle" aria-label="Their X handle" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="16" required></div>
+    {{#with choice}}<button class="pill" type="submit"{{#unless affordable}} disabled{{/unless}}>{{#if @root.read}}Read again{{else}}Read{{/if}} · {{cost price}}</button>
+    {{#unless affordable}}{{#if topup}}{{#if @root.funds.payable}}<a class="pill" href="/billing/topup?amount={{topup}}&amp;back=/follows/tags">Add ${{topup}}</a>{{/if}}{{/if}}{{/unless}}{{/with}}
+  </form>
+  {{#if reads.length}}<p class="tags-before">Read before: {{#each reads}}<a href="{{href}}">@{{handle}}</a>{{#unless @last}} · {{/unless}}{{/each}}</p>{{/if}}
+</section>
+
+{{#if read}}
+<p class="tags-who">{{> avatar person=readPerson small=true}}<span><b>@{{read.handle}}</b> tags {{count list.total}} {{#if (eq list.total 1)}}account{{else}}accounts{{/if}} in {{count read.posts}} {{#if (eq read.posts 1)}}post{{else}}posts{{/if}} · read {{ago read.at}}</span></p>
+
+{{#if list.total}}
+<div class="toolbar">
+  {{#> list-search action="/follows/tags" noSearch=true sorts=sorts reverseHref=reverseHref dir=list.dir keep=keep}}{{/list-search}}
+  <a class="tags-who-toggle" href="{{whoHref}}">{{#if whoAll}}Hide people you follow{{else}}Show people you follow{{/if}}</a>
+</div>
+{{/if}}
+
+{{!-- THE BULK FOLLOW: each row's box belongs to this form (form="follow-many"); public/js/pick.js counts the picks and
+      selects a page; the button sends them, one click (you picked them; only a press over a whole Inbox view asks
+      twice). --}}
+{{#if picking}}{{#if list.rows.length}}
+<form class="pick-bar" id="follow-many" method="post" action="/follows/tags/follow" data-busy>
+  <input type="hidden" name="_csrf" value="{{csrfToken}}">
+  <input type="hidden" name="handle" value="{{handle}}">
+  <label class="pick-all"><input type="checkbox" data-pick-all> Select all on this page</label>
+  <span class="pick-note">Up to {{followMax}} at a time: X allows that many follows every 15 minutes{{#if (eq followLeft 0)}}, and they’re used up: the timer at the top says when more come{{else if followLeft}}, {{followLeft}} left now{{/if}}.</span>
+  <button type="submit" class="pill" data-pick-go>Follow <span data-count="picked">0</span> selected</button>
+</form>
+{{/if}}{{/if}}
+
+<ol class="pcards rows"{{#unless list.rows.length}} hidden{{/unless}}>
+  {{#each list.rows}}{{> follow-card}}{{/each}}
+</ol>
+{{#if list.rows.length}}{{> pager pager}}{{/if}}
+{{#unless list.rows.length}}<p class="note">{{#if list.total}}You follow everyone they tag.{{else}}Their last {{count read.posts}} posts tag nobody.{{/if}}</p>{{/unless}}
+{{/if}}

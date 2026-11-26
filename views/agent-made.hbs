@@ -1,0 +1,21 @@
+{{!-- A token just made (POST /agents, routes/agents.js): shown on this page ONCE (only its hash is kept), with what
+      to paste where. Not cached (no-store). --}}
+<section class="choose connect">
+  <h1>Your token for {{name}}</h1>
+  <p>Copy it now: it won’t be shown again. Anyone with it can read your {{brandName}} data and leave drafts, so keep it like a password.</p>
+  <div class="panel">
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">Token</span><code class="agent-secret">{{token}}</code></div>
+      <div class="prow-control"><button type="button" class="btn copy-text" data-copy="{{token}}"><span class="when-idle">Copy</span><span class="when-copied">Copied</span></button></div>
+    </div>
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">Claude Code</span><span class="prow-hint">Paste in a terminal.</span><code class="agent-secret">{{claudeCode}}</code></div>
+      <div class="prow-control"><button type="button" class="btn copy-text" data-copy="{{claudeCode}}"><span class="when-idle">Copy</span><span class="when-copied">Copied</span></button></div>
+    </div>
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">Anything else</span><span class="prow-hint">The server is {{url}}, with the header <code>Authorization: Bearer</code> and the token. Most apps take it as:</span><pre class="agent-secret">{{json}}</pre></div>
+      <div class="prow-control"><button type="button" class="btn copy-text" data-copy="{{json}}"><span class="when-idle">Copy</span><span class="when-copied">Copied</span></button></div>
+    </div>
+  </div>
+  <p class="connect-answer"><a class="pill" href="/settings#agents">Done</a></p>
+</section>

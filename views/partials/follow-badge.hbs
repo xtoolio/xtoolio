@@ -1,0 +1,6 @@
+{{!-- THE tag for where you and someone stand, everywhere a person shows it (People cards, a Follows card, a person's
+      page): MUTUAL, the one that matters, with ⇄; "You follow" (they don't back) amber
+      (.oneway); "Follows you" quiet grey (.ftag). Context: followsYou, youFollow. Hash: `dash` (a facts column:
+      "—" when neither). Always one element, hidden when there's nothing to say, marked data-ftag: the Follow button
+      (public/js/post-actions.js showFollow) redraws it in place by the same rules. No newline at the end. --}}
+<span class="ftag{{#if followsYou}}{{#if youFollow}} mutual{{/if}}{{else}}{{#if youFollow}} oneway{{else}} none{{/if}}{{/if}}" data-ftag{{#if dash}} data-ftag-dash{{/if}}{{#unless followsYou}}{{#unless youFollow}}{{#unless dash}} hidden{{/unless}}{{/unless}}{{/unless}}>{{#if followsYou}}{{#if youFollow}}Mutual{{else}}Follows you{{/if}}{{else}}{{#if youFollow}}You follow{{else}}—{{/if}}{{/if}}</span>

@@ -1,0 +1,6 @@
+{{!-- A module row's month (Settings, the module picker, module-off): while on, what it costs; while off, what turning it
+      on would add now ("+"); `counted`: off, but counted anyway because another module needs it (the Inbox's reading,
+      for People: services/modulePrices.js). Context: { on, monthly, counted, bare }. `bare`: no " / mo" (the module
+      picker, whose total row says "Monthly estimate"). Blank when on and nothing; "No extra cost" when off and nothing.
+      No newline at the end. --}}
+{{#if counted}}{{cost monthly}}{{#unless bare}} / mo{{/unless}}{{else if on}}{{#if monthly}}{{cost monthly}}{{#unless bare}} / mo{{/unless}}{{/if}}{{else}}{{#if monthly}}+{{cost monthly}}{{#unless bare}} / mo{{/unless}}{{else}}No extra cost{{/if}}{{/if}}

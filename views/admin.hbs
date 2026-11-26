@@ -1,0 +1,142 @@
+{{!-- THE ADMIN PAGE (routes/admin.js; admins only: ADMIN_IDS). THE TABS, in routes/admin.js TABS' order: while the
+      site charges P&L, first and the default; Feedback (how many aren't handled); while sign-up is closed Waitlist (how
+      many wait). Feedback rows: who (their face opens
+      them on X), when, the page it was sent from, the words as typed (pre-wrap, escaped), its screenshots (thumbnails
+      opening THE VIEWER), Mark done / Reopen; handled
+      ones sit below, faded. --}}
+<header class="page-head"><h1>Admin</h1></header>
+<div class="list-head"><nav class="seg-tabs">{{#each tabs}}<a class="{{#if on}}on{{/if}}" href="{{href}}">{{label}}{{#if n}} <span class="seg-n">{{count n}}</span>{{/if}}</a>{{/each}}</nav></div>
+
+{{#if (eq view "feedback")}}
+  {{#if feedback.length}}
+    <ul class="fb-list">
+      {{#each feedback}}
+        <li class="fb-row{{#if done}} done{{/if}}" id="f{{id}}">
+          <div class="fb-head">
+            {{> who-av person=person tip=true}}
+            <span class="fb-who"><b>{{displayName person}}</b>{{#if person.username}} <span class="muted">@{{person.username}}</span>{{/if}}</span>
+            <span class="muted">· {{ago at}}{{#if page}} · <a href="{{page}}">{{page}}</a>{{/if}}</span>
+            <form class="fb-done" method="post" action="/admin/feedback/{{id}}/done"><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="on" value="{{#if done}}0{{else}}1{{/if}}"><button type="submit" class="btn{{#unless done}} fb-mark{{/unless}}">{{#if done}}Reopen{{else}}Mark done{{/if}}</button></form>
+          </div>
+          <p class="fb-text">{{text}}</p>
+          {{#if shots.length}}<div class="fb-shots" data-view-group>{{#each shots}}<button type="button" class="pm-open fb-shot" data-view="/admin/feedback/shot/{{this}}" data-view-kind="photo"><img src="/admin/feedback/shot/{{this}}" alt="Screenshot {{add @index 1}}" loading="lazy"></button>{{/each}}</div>{{/if}}
+        </li>
+      {{/each}}
+    </ul>
+  {{else}}
+    <p class="note">No feedback yet. It arrives here from the Feedback item in everyone’s sidebar.</p>
+  {{/if}}
+{{/if}}
+
+{{#if (eq view "waitlist")}}{{#with waitlist}}
+  {{!-- THE WAITLIST (routes/admin.js waitlistPanel; services/waitlist.js, services/waitlistDms.js): first whether the
+        "you're in" DMs are on (the site's own account sends them on its one grant; nothing to connect: when they're
+        off, signing in to xtoolio as the site's account turns them on, routes/auth.js); then THE PEOPLE,
+        Waiting | Granted, one row each (THE LIST ROW's look, the admin rows' .adm-row: who, then the facts in a column,
+        then the row's press), with
+        Grant (let them in + their "you're in" DM) or how their DM went. Only a follower of the site's account (or
+        someone taking DMs from anyone) can receive the DM, so each row says whether they follow. --}}
+  {{#with dms}}
+    <div class="panel no-cost">
+      <div class="prow">
+        <div class="prow-text"><span class="prow-name">“You’re in” DMs from @{{siteX}}</span><span class="prow-hint">{{#if on}}On. Each Grant sends a DM.{{else}}Off, so a Grant sends no DM. {{#if (eq why "reauth")}}X stopped taking @{{siteX}}’s sign-in.{{else if (eq why "scope")}}@{{siteX}} signed in before it could send DMs.{{else}}@{{siteX}} hasn’t signed in here yet.{{/if}} Sign in to {{@root.brandName}} as @{{siteX}} to turn them on.{{/if}}</span></div>
+      </div>
+    </div>
+  {{/with}}
+
+  {{!-- INVITE (routes/admin.js, services/waitlist.js invite): someone let in by @handle before they've joined. The
+        handle box is the front page's (.estimate-handle); a pasted profile link works too (lib/handle.js). With
+        INVITE_CREDIT_USD the button says it ("Invite + $10.00"): promised on their row, paid at their first sign-in. --}}
+  <form class="estimate-handle wl-invite" method="post" action="/admin/waitlist/invite" data-busy>
+    <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+    <div class="handle-box"><input type="text" name="handle" placeholder="@handle" aria-label="Their X handle" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="120" required></div>
+    <button class="pill" type="submit">Invite{{#if inviteCredit}} + {{money inviteCredit}}{{/if}}</button>
+  </form>
+
+  <div class="list-head wl-tabs"><nav class="seg-tabs">
+    <a class="{{#if (eq view "waiting")}}on{{/if}}" href="/admin?tab=waitlist">Waiting <span class="seg-n">{{count counts.waiting}}</span></a>
+    <a class="{{#if (eq view "granted")}}on{{/if}}" href="/admin?tab=waitlist&amp;show=granted">Granted <span class="seg-n">{{count counts.granted}}</span></a>
+  </nav></div>
+  {{#if people.length}}
+    <ul class="adm-rows wl-rows">
+      {{#each people}}
+        <li class="adm-row wl-row" id="w{{id}}">
+          <div class="adm-who">
+            {{> who-av person=person}}
+            <span class="adm-name"><b>{{displayName person}}</b> <a class="muted" href="https://x.com/{{person.username}}" target="_blank" rel="noopener">@{{person.username}}</a></span>
+          </div>
+          <span class="wl-facts">
+              {{#if followers}}<span>{{compact followers}} followers</span>{{/if}}
+              <span>{{#if invited}}invited{{else}}joined{{/if}} {{ago joinedAt}}</span>
+              {{#with inviter}}<span>via {{#if username}}@{{username}}’s{{else}}a deleted account’s{{/if}} link</span>{{/with}}
+              {{#if (eq follows true)}}<span class="wl-follows">Follows @{{@root.siteX}}</span>{{else if (eq follows false)}}<span class="wl-nofollow">Doesn’t follow @{{@root.siteX}}</span>{{else}}<span>Follow not checked</span>{{/if}}
+              {{#if grantedAt}}{{#unless invited}}<span>granted {{ago grantedAt}}</span>{{/unless}}{{/if}}
+              {{#with credit}}<span class="wl-credit{{#if paid}} paid{{/if}}">{{#if paid}}{{money micros}} credited{{else}}+{{money micros}} at sign-in{{/if}}</span>{{/with}}
+          </span>
+          <div class="wl-act">
+            {{#if signedUp}}<span class="adm-state on">Signed up</span>
+            {{else if grantedAt}}
+              {{#if dm}}
+                {{#if (eq dm.status "sent")}}<span class="adm-state on">DM sent</span>
+                {{else if (eq dm.status "queued")}}<span class="adm-state">DM queued</span>
+                {{else}}<span class="adm-state off" data-tip="{{dm.why}}">DM refused</span><form method="post" action="/admin/waitlist/{{id}}/dm" data-busy><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="show" value="{{../view}}"><button type="submit" class="btn">Send again</button></form>{{/if}}
+              {{else}}<span class="adm-state">No DM</span>{{/if}}
+            {{else}}
+              <form method="post" action="/admin/waitlist/{{id}}/grant" data-busy><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="show" value="{{../view}}"><button type="submit" class="btn wl-grant">Grant</button></form>
+            {{/if}}
+          </div>
+        </li>
+      {{/each}}
+    </ul>
+  {{else}}
+    <p class="note">{{#if (eq view "granted")}}Nobody granted yet.{{else}}Nobody’s waiting.{{/if}}</p>
+  {{/if}}
+{{/with}}{{/if}}
+
+{{#if (eq view "pnl")}}{{#with pnl}}
+  {{!-- THE P&L (services/pnl.js): one month (UTC, by link), as THE LIST ROW (partials/pnl-row.hbs): column heads, the
+        bold tinted Total row FIRST (the table fills up, so the totals sit at its top), THE SITE'S OWN COSTS as ONE
+        folded row, "Site costs ›" (a <details>, no script), opening to a row per kind (sign-ins, front-page estimates,
+        waitlist follow checks, invites, "you're in" DMs, one-off scripts: a margin of −their cost), then the accounts,
+        most deposited first. No fine print, and no figure above the table (the table's Total
+        is enough; the net, charged − X's cost, big, with X's real spend under it, deleted whole). --}}
+  <div class="pnl-month">
+    <a class="btn ghost icon pnl-prev" href="/admin?tab=pnl&amp;month={{prev}}" aria-label="Previous month">{{> icon-chevron}}</a>
+    <b>{{name}}</b>
+    {{#if next}}<a class="btn ghost icon" href="/admin?tab=pnl&amp;month={{next}}" aria-label="Next month">{{> icon-chevron}}</a>{{/if}}
+  </div>
+  {{#if (or rows.length platform.length)}}
+    <div class="adm-rows pnl-rows">
+      <div class="adm-row fig-row pnl-row head"><span>Account</span><span class="n">Deposited</span><span class="n">Balance</span><span class="n">Charged</span><span class="n">Margin</span><span class="n">Margin %</span></div>
+      {{> pnl-row isTotal=true label="Total" row=total}}
+      {{#if site}}<details class="pnl-site">{{> pnl-row label=site.label row=site summary=true}}{{#each platform}}{{> pnl-row label=label row=this sub=true}}{{/each}}</details>{{/if}}
+      {{#each rows}}{{#if person}}{{> pnl-row person=person row=this}}{{else}}{{> pnl-row label="A deleted account" row=this}}{{/if}}{{/each}}
+    </div>
+  {{else}}
+    <p class="note">Nothing ran in {{name}}.</p>
+  {{/if}}
+{{/with}}{{/if}}
+
+{{#if (eq view "activity")}}{{#with activity}}
+  {{!-- ACTIVITY (services/activity.js): what each account did in xtoolio over the window (THE TABS: 7 days, the
+        default; 24 hours; 30 days), as THE FIGURES ROW (.fig-row, P&L's columns): who and where its syncing stands, when
+        last active, then the replies, likes, follows and unfollows sent to X from xtoolio (bulk presses counted per write) and the
+        conversations marked done; Posts synced is all time (its own posts and mentions), not the window. Every
+        account, the most recently active first. --}}
+  <nav class="seg-tabs act-windows" aria-label="Window">{{#each windows}}<a href="{{href}}"{{#if on}} class="on" aria-current="true"{{/if}}>{{label}}</a>{{/each}}</nav>
+  <div class="adm-rows">
+    <div class="adm-row fig-row seven head"><span>Account</span><span class="n n-last">Last active</span><span class="n">Posts synced</span><span class="n">Replies</span><span class="n">Likes</span><span class="n">Follows</span><span class="n">Unfollows</span><span class="n">Done</span></div>
+    {{#each rows}}
+      <div class="adm-row fig-row seven">
+        {{> adm-who person=person status=status}}
+        <span class="n n-last">{{#if last}}{{ago last}}{{else}}<span class="muted">–</span>{{/if}}</span>
+        <span class="n">{{#if synced}}{{count synced}}{{else}}<span class="muted">–</span>{{/if}}</span>
+        <span class="n">{{#if replies}}{{count replies}}{{else}}<span class="muted">–</span>{{/if}}</span>
+        <span class="n">{{#if likes}}{{count likes}}{{else}}<span class="muted">–</span>{{/if}}</span>
+        <span class="n">{{#if follows}}{{count follows}}{{else}}<span class="muted">–</span>{{/if}}</span>
+        <span class="n">{{#if unfollows}}{{count unfollows}}{{else}}<span class="muted">–</span>{{/if}}</span>
+        <span class="n">{{#if done}}{{count done}}{{else}}<span class="muted">–</span>{{/if}}</span>
+      </div>
+    {{/each}}
+  </div>
+{{/with}}{{/if}}

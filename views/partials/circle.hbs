@@ -1,0 +1,10 @@
+{{!-- YOUR CIRCLE (services/circle.js): you in the middle, then the rings, each seat THE avatar in a link with THE
+      tooltip (their name). Seats are placed by /circle.css (generated from services/circle.js, percentages of the board
+      times its zoom; `board` = g-<geometry> cz-<rings drawn>), so it scales and THE RINGS always fill the board. The
+      classic (size 50) overlaps over faint ring lines; the rings (100, 250) wear how many are around you (`around`).
+      Drawn on your circle page (a name opens their People page), the public page (it opens them on X) and the front
+      page's tour. Context: circle.boardView → { me, board, around, dots: [{ person, slot, ring, href, external }] }. --}}
+<div class="circle-board {{board}}" role="list" aria-label="Circle">
+  <span class="circle-dot cs-0 is-me" role="listitem">{{> avatar person=me}}{{#if around}}<span class="circle-count">{{count around}}</span>{{/if}}</span>
+  {{#each dots}}{{#if href}}<a class="circle-dot ring-{{ring}} {{slot}}" href="{{href}}"{{#if external}} target="_blank" rel="noopener"{{/if}} data-tip="{{displayName person}}" aria-label="{{displayName person}}" role="listitem">{{> avatar person=person}}</a>{{else}}<span class="circle-dot ring-{{ring}} {{slot}}" data-tip="{{displayName person}}" role="listitem">{{> avatar person=person}}</span>{{/if}}{{/each}}
+</div>

@@ -1,0 +1,7 @@
+{{!-- The app's answer is on its way (routes/agents.js): the page moves on by itself (the layout's `refresh`), and the
+      link is here if the browser asks first (a desktop app's own address). --}}
+<section class="choose connect">
+  <h1>{{#if approved}}Connected{{else}}Cancelled{{/if}}</h1>
+  <p>{{#if approved}}Taking you back to the app…{{else}}Nothing was connected. Taking you back…{{/if}}</p>
+  <p class="connect-answer"><a class="btn" href="{{to}}">Continue</a></p>
+</section>

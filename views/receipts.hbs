@@ -1,0 +1,12 @@
+{{!-- RECEIPTS (web.js GET /settings/receipts; Settings → Billing → Balance's "Receipts"): each payment, newest first,
+      with Stripe's own receipt (services/billing.js receiptsFor: what the top-up and auto-refill credits kept). A
+      reading page, as minimal as it gets: the way back, the title, the rows. --}}
+<p class="post-back"><a href="/settings#billing">{{> icon-back}}Settings</a></p>
+<header class="page-head"><h1>Receipts</h1></header>
+{{#if receipts.length}}
+  <table class="receipts">
+    {{#each receipts}}<tr><td>{{shortDate at}}</td><td class="muted">{{#if (eq kind "auto-refill")}}Auto-refill{{else}}Top-up{{/if}}</td><td class="n"><b>{{dollars usd}}</b></td><td><a href="{{url}}" target="_blank" rel="noopener">{{> icon-exit}} Receipt</a></td></tr>{{/each}}
+  </table>
+{{else}}
+  <p class="note">No payments yet.</p>
+{{/if}}

@@ -1,0 +1,17 @@
+{{!-- THE POST FOOT, under every post in a conversation (partials/bubble.hbs, a message; partials/topic-post.hbs, the
+      seed and the thread above it): ♥ · ↻ · Reply · On X, then a waiting draft, then the composer.
+      - ♥ (partials/liked.hbs) and ↻ (partials/repost-button.hbs) write from here, charged per press.
+      - Reply, on every post still on X (`replyTo`; your own too, "yourself": a follow-up under it): with Replying, it
+        opens this post's own composer (the <dialog> below, public/js/post-actions.js); without it, or without script,
+        it's X's reply window for the post.
+      - ON X (beside Reply under the post, so it's always in the same place): the post's own page on X, the
+        one place X lets you like, reply and repost together (its
+        reply window has no ♥). A small window beside the page on a computer, the link itself on a phone (`data-on-x`,
+        post-actions.js); what you do there comes back live. It's the ONE way a post here leaves for X: it REPLACED
+        the arrow in each post's top-right corner (partials/post-exit.hbs, which quote cards and person rows keep: they
+        have no foot) and the In xtoolio / On X choice (Account.pressMode), which turned the ♥, ↻ and
+        Reply themselves into links to X. `.reply-to` is the foot's text-press look (Mark done wears it too).
+      Context: a post view (people.postView) with `id`; `draft` (services/inbox.js draftOf) on a message owing a reply. --}}
+<div class="post-foot"><div class="likes-slot" data-likes-for="{{id}}"{{#if likesPerson}} data-person="{{likesPerson}}"{{/if}}>{{> liked}}</div>{{> repost-button}}{{#if replyTo}}<a class="reply-to" href="https://x.com/intent/post?in_reply_to={{id}}" target="_blank" rel="noopener" data-reply-to="{{id}}"{{#unless @root.reply}} data-on-x{{/unless}}>{{> icon-reply}}Reply</a>{{/if}}{{#unless gone}}<a class="reply-to on-x" href="https://x.com/i/status/{{id}}" target="_blank" rel="noopener" data-on-x>{{> icon-exit}}On X</a>{{/unless}}</div>
+{{#if draft}}{{> draft-line}}{{/if}}
+{{#if replyTo}}{{#if @root.reply}}<dialog class="reply-here" aria-label="Reply to {{replyTo}}">{{> reply-box replyId=id name=replyTo to=replyingTo linkPrice=@root.reply.linkPrice pictures=@root.reply.pictures draftText=draft.text}}</dialog>{{/if}}{{/if}}

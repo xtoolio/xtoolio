@@ -1,0 +1,20 @@
+{{!-- One post of yours in YOUR POSTS (services/likes.js postRows), as ONE compact row (a compact,
+      full-width table row, no background padding, nothing that must be read whole). Columns, the same on every row so
+      they line up like a table (app.css .like-row):
+      the faces of everyone it drew (likes, reposts, replies; newest first, up to 5, apart, each its own target: People
+      page, else X; its name in THE tooltip), what it drew (♥ N · ↻ N · ↩ N, each only when there are some: no names, just
+      a count: the names were noise), your post (its picture as
+      a small square when it has one, `pic`; a reply to someone says "Replying to <them>" first, X's words, as THE tag
+      (.ftag, the follow tags' grey chip), so it never reads as the start of your words; then its first words, `preview`), when it last moved (`latestAt`: the newest
+      like, repost or reply X dated, else when you posted it), and THE EXIT.
+      THE WHOLE ROW OPENS THE POST HERE (/posts/:id, through the conversation engine: views/conversation.hbs:
+      a list that only linked out to X wasn't worth much; the row used to open it on X): THE link layer
+      (.post-open), the faces and the exit above it. `fresh`: a live like or repost since you last opened the page. --}}
+<article class="like-row{{#if fresh}} fresh{{/if}}" data-feed-row="{{postId}}">
+  <a class="post-open" href="{{href}}" tabindex="-1" aria-hidden="true"></a>
+  <span class="like-faces">{{#each likers}}{{> who-av person=this tip=true}}{{/each}}</span>
+  <span class="like-n"><span class="like-n-likes">{{#if this.count}}<span aria-label="{{count this.count}} {{#if (eq this.count 1)}}like{{else}}likes{{/if}}">{{> icon-heart}}{{count this.count}}</span>{{/if}}</span><span class="like-n-reposts">{{#if reposts}}<span aria-label="{{count reposts}} {{#if (eq reposts 1)}}repost{{else}}reposts{{/if}}">{{> icon-repost}}{{count reposts}}</span>{{/if}}</span><span class="like-n-replies">{{#if replies}}<span aria-label="{{count replies}} {{#if (eq replies 1)}}reply{{else}}replies{{/if}}">{{> icon-reply}}{{count replies}}</span>{{/if}}</span></span>
+  <p class="like-post{{#if post.gone}} gone{{/if}}">{{#if post.gone}}This post isn't available on X.{{else}}{{#if pic}}<span class="like-thumb"><img src="{{pic.src}}" alt="" loading="lazy">{{#if pic.badge}}<span class="media-badge">{{pic.badge}}</span>{{/if}}</span>{{/if}}{{#if replyTo}}<span class="ftag like-to">Replying to {{displayName replyTo}}</span>{{/if}}<a class="like-words" href="{{href}}">{{preview}}</a>{{/if}}</p>
+  <span class="like-when"><time class="post-time" datetime="{{latestAt}}">{{rel latestAt}}</time></span>
+  {{#unless post.gone}}{{#with post}}{{> post-exit}}{{/with}}{{/unless}}
+</article>

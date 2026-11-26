@@ -1,0 +1,3 @@
+{{!-- WHO an admin row is about (Admin → P&L, Admin → Activity): their face, name and @handle, then where their syncing
+      stands now (`status` { label, tone }: routes/admin.js statusOf, THE ADMIN STATE WORD). No newline at the end. --}}
+<div class="adm-who">{{> who-av person=person}}<span class="adm-name"><b>{{displayName person}}</b> <span class="muted">@{{person.username}}</span></span>{{#if status}}<span class="adm-state {{status.tone}}">{{status.label}}</span>{{/if}}</div>

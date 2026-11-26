@@ -1,0 +1,32 @@
+{{!-- MEDIA (/media; web.js + services/mediaLibrary.js; everything you've sent in one place):
+      every photo, GIF and video in your own posts (the ones you posted on X too), newest first,
+      through THE listing engine: tabs All / Photos / GIFs / Videos / Pinned / Saved (complete counts: it's your own
+      posts), 60 a page, newest first; no search or reverse (you find a picture by its kind and when, not by the words
+      of the post it came in). A tile opens its post on X; its ☆ pins it (POST /media/pins: the same pins as the reply
+      box's 📎 panel, where pinned ones come first). Nothing is stored: the pictures are on X.
+      SAVED ones (someone else's, kept with "+ Save" on a post: mediaLibrary.save) are tagged with who they're from
+      (their picture and @handle) and have a Saved tab. EVERY tile has a ✕ (data-media-remove) beside its ☆: a saved
+      one is unsaved (POST /media/saved on=0), one of yours is removed from your media for good (POST /media/hidden
+      on=1, mediaLibrary.hide: off this page and the 📎 panel; the post stays on X). public/js/post-actions.js takes the
+      tile away at once, the tabs' counts move (data-count="media-<tab>"), and the toast's Undo puts it back. --}}
+<header class="page-head">
+  <h1>Media</h1>
+</header>
+
+<div class="list-head">
+  <nav class="seg-tabs" aria-label="Kinds">
+    {{#each tabs}}<a href="{{href}}"{{#if on}} class="on" aria-current="page"{{/if}}>{{label}} <span class="seg-n" data-count="media-{{key}}">{{count n}}</span></a>{{/each}}
+  </nav>
+</div>
+{{#if list.rows.length}}
+  <ul class="media-wall">
+    {{#each list.rows}}<li class="media-tile{{#if pinned}} pinned{{/if}}" data-media-key="{{key}}" data-media-type="{{type}}"{{#if saved}} data-media-saved{{/if}}>
+      <a class="media-pick" href="https://x.com/i/status/{{postId}}" target="_blank" rel="noopener" aria-label="Open this post on X">{{> media-pic alt=""}}{{#if (eq type "gif")}}<span class="media-badge">GIF</span>{{else if (eq type "video")}}<span class="media-badge">▶</span>{{/if}}<time class="media-when" datetime="{{at}}">{{shortDate at}}</time>{{#if from}}<span class="media-from">{{> avatar person=from small=true}}{{#if from.username}}@{{from.username}}{{/if}}</span>{{/if}}</a>
+      <form class="media-unsave" method="post" action="{{#if saved}}/media/saved{{else}}/media/hidden{{/if}}" data-media-remove><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="key" value="{{key}}"><input type="hidden" name="postId" value="{{postId}}"><input type="hidden" name="on" value="{{#if saved}}0{{else}}1{{/if}}"><input type="hidden" name="back" value="{{@root.currentPath}}"><button type="submit" class="media-pin" aria-label="Remove from your media">✕</button></form>
+      <form method="post" action="/media/pins"><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="key" value="{{key}}"><input type="hidden" name="on" value="{{#if pinned}}0{{else}}1{{/if}}"><input type="hidden" name="back" value="{{@root.currentPath}}"><button type="submit" class="media-pin" data-media-pin aria-pressed="{{#if pinned}}true{{else}}false{{/if}}" aria-label="{{#if pinned}}Unpin{{else}}Pin to the top of your media{{/if}}">{{#if pinned}}★{{else}}☆{{/if}}</button></form>
+    </li>{{/each}}
+  </ul>
+  {{> pager pager}}
+{{else}}
+  <p class="note">{{#if list.total}}None of these yet.{{else}}Photos, GIFs and videos you post show up here, and ones you save from other people’s posts.{{/if}}</p>
+{{/if}}

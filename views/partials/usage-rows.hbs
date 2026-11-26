@@ -1,0 +1,16 @@
+{{!-- The Usage table's rows (views/usage.hbs draws the first page, views/usage-rows.hbs every later one: one renderer).
+      `rows` from web.js ledgerPage; `cols.balance`: whether the table has Balance (a statement's own, or the owner's X
+      balance as the clock read it). The money column is a statement's charge, or X's raw price
+      for the run (the owner's, and an account's while billing is off). The first row of each day other than today says
+      its day above its time. --}}
+{{#each rows}}
+  <tr>
+    <td class="when">{{#if newDay}}<span class="when-day">{{#if yesterday}}Yesterday{{else}}{{shortDate at}}{{/if}}</span>{{/if}}{{clock at}}</td>
+    <td class="what">
+      <span class="what-name">{{what}}{{#if running}} <span class="state on">· running</span>{{else if failed}} <span class="muted tip-wide" data-tip="{{error}}">· didn't finish</span>{{/if}}{{#if receiptUrl}} · <a href="{{receiptUrl}}" target="_blank" rel="noopener">Receipt</a>{{/if}}</span>
+      {{#if reads}}<span class="reads">{{> reads reads}}</span>{{/if}}
+    </td>
+    <td class="n strong">{{#if running}}<span class="muted">…</span>{{else if credit}}<span class="credit">+{{money micros}}</span>{{else if micros}}{{money micros}}{{else}}<span class="muted">–</span>{{/if}}</td>
+    {{#if ../cols.balance}}<td class="n bal">{{#if (eq balanceAfter null)}}<span class="muted">–</span>{{else}}{{money balanceAfter}}{{/if}}</td>{{/if}}
+  </tr>
+{{/each}}

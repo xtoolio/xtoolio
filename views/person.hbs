@@ -1,0 +1,46 @@
+<header class="profile" data-person-row="{{person.id}}"{{#if person.followsYou}} data-follows-you{{/if}}>
+  {{> avatar person=person large=true}}
+  <div class="profile-text">
+    {{!-- Their name with ↻ (re-read their profile) and On X (their profile on X) beside it, and their @handle right
+          under it: who they are, together, beside the picture (X's own profile order). --}}
+    <div class="profile-name"><h1>{{displayName person}}</h1><div class="pcard-actions">{{> refresh-profile id=person.id fetchedAt=person.profile.fetchedAt}}{{#if person.username}}{{> post-exit user=person.username}}{{/if}}</div></div>
+    {{#if person.username}}<div class="profile-handle">{{> handle username=person.username}}</div>{{/if}}
+    {{!-- The facts, then where you stand: each fact its own part, the " · " between parts drawn by CSS
+          (.sub-part + .sub-part), then THE Follow button at the line's end (the Following extra; it says where you stand:
+          ✓ Following / ⇄ Mutual / Follow back), or without it, the tag. --}}
+    <div class="sub">
+      {{#if person.profile.followers}}<span class="sub-part">{{compact person.profile.followers}} {{#if (eq person.profile.followers 1)}}follower{{else}}followers{{/if}}</span>{{/if}}
+      {{#if person.profile.location}}<span class="sub-part">{{person.profile.location}}</span>{{/if}}
+      {{#with person.profile.website}}{{#with (webHref url)}}<span class="sub-part"><a href="{{this}}" target="_blank" rel="noopener nofollow">{{../display}}</a></span>{{/with}}{{/with}}
+      {{#if canFollow}}{{#with person}}{{> follow-button id=id}}{{/with}}{{/if}}
+      {{#if showFollows}}{{#unless canFollow}} {{#with person}}{{> follow-badge}}{{/with}}{{/unless}}{{/if}}
+      {{#with person}}{{> like-latest id=id}}{{/with}}
+    </div>
+    {{#if person.profile.gone}}<p class="sub">X isn't serving this account right now (suspended or deleted).</p>{{/if}}
+    {{#if bio.length}}<p class="bio">{{> segments segments=bio}}</p>{{/if}}
+  </div>
+</header>
+
+<h2 class="section">Conversations <span class="muted">{{threads.length}}</span></h2>
+
+{{!-- THE LIST ROW (as Your posts, People and Follows: no box, no column heads, a line between, one height), one per
+      conversation, newest first: what it's about (the first post's author and words), the back and forth in it said
+      as a People row says it ("2 ↔ 3 replies", "2 ↔ 1 likes", each number explained in THE tooltip), when it last
+      moved, and a ›. The whole row opens the conversation (THE link layer, .post-open). --}}
+{{#if threads.length}}
+  <ol class="convo-rows">
+    {{#each threads}}
+      <li class="convo-row">
+        <a class="post-open" href="/people/{{../person.id}}/c/{{id}}" tabindex="-1" aria-hidden="true"></a>
+        <p class="convo-about">{{> avatar person=about.author small=true}}<a class="convo-words" href="/people/{{../person.id}}/c/{{id}}">{{#if about.gone}}A post that isn’t on X anymore{{else}}{{about.text}}{{/if}}</a></p>
+        <span class="convo-fact"><span class="pair"><span data-tip="From you">{{you}}</span><span class="pair-sep" aria-label="and">↔</span><span data-tip="From them">{{them}}</span></span> replies</span>
+        {{#if @root.likes.you}}<span class="convo-fact"><span class="pair"><span data-tip="Liked by you">{{youLiked}}</span><span class="pair-sep" aria-label="and">↔</span>{{#if @root.likes.them}}<span data-tip="Liked by them">{{theyLiked}}</span>{{else}}<span class="muted" data-tip="Not read">–</span>{{/if}}</span> likes</span>
+        {{else if @root.likes.them}}<span class="convo-fact"><span class="pair"><span class="muted" data-tip="Not read">–</span><span class="pair-sep" aria-label="and">↔</span><span data-tip="Liked by them">{{theyLiked}}</span></span> likes</span>{{else}}<span></span>{{/if}}
+        <span class="like-when"><time datetime="{{lastAt}}">{{rel lastAt always=true}}</time></span>
+        <span class="convo-go" aria-hidden="true">{{> icon-chevron}}</span>
+      </li>
+    {{/each}}
+  </ol>
+{{else}}
+  <p class="note">No conversations.</p>
+{{/if}}

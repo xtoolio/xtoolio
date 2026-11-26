@@ -1,0 +1,41 @@
+{{!-- ONE ROW OF THE INBOX RAIL, a person's or a post's (views/inbox.hbs; web.js builds `rail.rows`): the link that picks
+      it (its leading part, avatar + name or what the post is about, is the block), then THE COLUMNS at its right end:
+      ↩ N (replies owed, a figure), ♥ N (likes owed, ON the button that likes them), ✓ (done with it).
+      ♥ is THE bulk like scoped to this row (POST /inbox/like-all with its `person` or `post`; post-actions.js likeAll)
+      and ✓ THE Mark all done scoped to it, each ONE click; only the first row's, over the whole view, take THE
+      CLICK-AGAIN CONFIRM (public/js/confirm.js: "Click again to like N"); all move the page at once (post-actions.js
+      likeAll / doneAll). A
+      column at 0 keeps its place, blank ([data-zero] → .is-zero), so the columns line up; post-actions.js recounts
+      each number off THE OWED TABLE (data-count="rail-<like|reply>-<key>"). Context: a row { key,
+      person, post, href, on, like, reply, likeN, at (ISO: a phone orders its list by it, public/js/rail-order.js),
+      about.yours (your own post: no avatar on a phone, .own), all (THE FIRST ROW, Everyone / Every post: key "all",
+      its columns the totals, its ♥ the whole view's bulk like, its ✓ Mark all done taking THE click-again; no
+      data-rail-key, so it's never hidden at 0 or counted as a row of the rail) }. `@root.rail.picksOnly` (a post's
+      page, web.js /posts/:id): the row only picks; its columns are figures, no ♥ or ✓ press (the card has its own).
+      data-owes-nothing: drawn at 0 (only a post's page lists people owing nothing; post-actions.js recount). --}}
+<div class="rail-row{{#if on}} on{{/if}}{{#if about.yours}} own{{/if}}"{{#unless all}} data-rail-key="{{key}}"{{#unless (or like reply)}} data-owes-nothing{{/unless}}{{/unless}}{{#if at}} data-at="{{at}}"{{/if}}>
+  <a href="{{href}}"{{#if all}} data-rail-everyone{{/if}}{{#if on}} class="on" aria-current="page"{{/if}}>{{> @partial-block}}</a>
+  <span class="rail-acts">
+    <span class="rail-reply{{#unless reply}} is-zero{{/unless}}" data-zero>{{> icon-reply}}<b data-count="rail-reply-{{key}}">{{count reply}}</b></span>
+    {{#if @root.railLike}}
+    {{#if @root.railLike.left}}
+    <form id="rail-like-{{key}}" method="post" action="/inbox/like-all" data-like-all-form>
+      <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+      {{> rail-view}}
+      <button type="submit" class="btn ghost rail-like{{#unless like}} is-zero{{/unless}}" data-zero data-rail-like data-like-key="{{key}}"{{#if all}}{{#if (gt likeN 1)}} data-confirm="Click again to like {{likeN}}"{{/if}}{{/if}} aria-label="Like what’s waiting here on X">{{> icon-heart}}<b data-count="rail-like-{{key}}">{{count like}}</b></button>
+    </form>
+    {{else}}
+    <button type="button" class="btn ghost rail-like tip-end{{#unless like}} is-zero{{/unless}}" data-zero disabled data-tip="More likes {{#if @root.railLike.resetAt}}at {{clock @root.railLike.resetAt}}{{else}}tomorrow{{/if}}">{{> icon-heart}}<b data-count="rail-like-{{key}}">{{count like}}</b></button>
+    {{/if}}
+    {{else if @root.likesKnown}}
+    <span class="rail-like{{#unless like}} is-zero{{/unless}}" data-zero>{{> icon-heart}}<b data-count="rail-like-{{key}}">{{count like}}</b></span>
+    {{/if}}
+    {{#unless @root.rail.picksOnly}}
+    <form method="post" action="/inbox/done-all" data-done-all>
+      <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+      {{> rail-view}}
+      <button type="submit" class="btn ghost icon rail-done"{{#if all}} data-confirm="Click again to mark all done" aria-label="Mark all done"{{else}} aria-label="Mark done"{{/if}}>✓</button>
+    </form>
+    {{/unless}}
+  </span>
+</div>

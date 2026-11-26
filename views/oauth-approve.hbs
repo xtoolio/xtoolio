@@ -1,0 +1,43 @@
+{{!-- An app asks to connect to this account (routes/agents.js, services/agentOAuth.js): who's asking (its own name
+      for itself, unverified, so where it sends you back is said too: that's what can't be faked), what it gets and what
+      it can't do, Approve / Cancel (one form, two answers). Signed out: Sign in with X first, a LINK (form-action), back
+      here after. Gone (expired, used, unknown): say so; the app starts again. --}}
+<section class="choose connect">
+  {{#if ask}}
+    {{!-- The place beside the name, first thing read: the name is the app's own claim, the place is the one thing it
+          can't fake. --}}
+    <h1>Connect {{ask.name}}{{#if ask.place}} <span class="connect-place">({{ask.place}})</span>{{/if}}?</h1>
+    <div class="panel">
+      <div class="prow">
+        <div class="prow-text">
+          <span class="prow-name">{{ask.name}} will be able to</span>
+          <ul class="connect-list">
+            <li>read your {{brandName}} Inbox, conversations, people and posts</li>
+            <li>leave draft replies here, for you to send</li>
+          </ul>
+          <span class="prow-name">It can’t</span>
+          <ul class="connect-list">
+            <li>post, reply, like, repost or follow on X</li>
+            <li>mark anything done, or change your settings</li>
+          </ul>
+          {{#if ask.place}}<span class="prow-hint">Approving sends you back to <b>{{ask.place}}</b>. If that isn’t where you started, cancel.</span>{{/if}}
+        </div>
+      </div>
+    </div>
+    {{#if account}}
+      <form class="connect-answer" method="post" action="/oauth/approve">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <input type="hidden" name="r" value="{{ask.id}}">
+        <button type="submit" class="pill" name="answer" value="approve">Approve</button>
+        <button type="submit" class="btn ghost" name="answer" value="deny">Cancel</button>
+      </form>
+      <p class="fine">Connected as @{{account.username}}. Disconnect it any time in <a href="/settings#agents">Settings</a>.</p>
+    {{else}}
+      <p class="connect-answer"><a class="pill" href="{{signIn}}">Sign in with X to continue</a></p>
+    {{/if}}
+  {{else}}
+    <h1>This link has expired</h1>
+    <p>{{#if refused}}{{refused}}{{else}}Connecting takes a few minutes at most, and each link works once. Start again from the app.{{/if}}</p>
+    {{#if account}}<p class="fine">Your connections are in <a href="/settings#agents">Settings</a>.</p>{{/if}}
+  {{/if}}
+</section>

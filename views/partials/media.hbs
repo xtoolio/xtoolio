@@ -1,0 +1,11 @@
+{{!-- A post's pictures (services/people.js mediaView). A press on one opens THE VIEWER (partials/lightbox.hbs,
+      public/js/lightbox.js): big, a photo at its original size (a press zooms to 1:1), a GIF playing, a video's frame with Play on
+      X; ← → through the post's others. Inside xtoolio, so the post's On X (partials/post-foot.hbs) stays the one way to X;
+      pictures used to open nothing. Quote cards' pictures too (inQuote: smaller tiles).
+      Each is a <button class="pm-open">: data-view (the address), data-view-kind (photo | gif | video), data-post (its
+      post, for a video's Play on X). Without script it does nothing, as before.
+      width/height are attributes, not style (CSP), so the box keeps its shape before the image loads.
+      On someone else's post, a photo or GIF that could go in a reply carries "+ Save" (`save`: someone else's
+      picture or GIF kept in your media library, tagged with who sent it): POST /media/saved,
+      in place by public/js/post-actions.js ("✓ Saved" presses again to remove it). A form beside the button, not in it. --}}
+<div class="post-media{{#if (gt media.length 1)}} grid{{/if}}{{#if inQuote}} in-quote{{/if}}">{{#each media}}<span class="pm"><button type="button" class="pm-open" data-view="{{view.src}}" data-view-kind="{{view.kind}}" data-post="{{../id}}" aria-label="View {{#if (eq view.kind "photo")}}picture{{else if (eq view.kind "gif")}}GIF{{else}}video{{/if}} larger">{{> media-pic}}{{#if badge}}<span class="pm-badge">{{badge}}</span>{{/if}}</button>{{#unless ../inQuote}}{{#if save}}<form class="pm-save" method="post" action="/media/saved" data-media-save><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="key" value="{{key}}"><input type="hidden" name="postId" value="{{../id}}"><input type="hidden" name="on" value="{{#if save.saved}}0{{else}}1{{/if}}"><input type="hidden" name="back" value="{{@root.currentPath}}"><button type="submit" class="pm-save-btn{{#if save.saved}} on{{/if}}" aria-pressed="{{#if save.saved}}true{{else}}false{{/if}}" aria-label="{{#if save.saved}}Remove this {{save.kind}} from your media{{else}}Save this {{save.kind}} to your media{{/if}}">{{#if save.saved}}✓ Saved{{else}}+ Save{{/if}}</button></form>{{/if}}{{/unless}}</span>{{/each}}</div>

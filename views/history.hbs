@@ -1,0 +1,6 @@
+{{!-- "How far back?" for People turned on after the start (routes/pages.js readyOrRender; a new account answers it on
+      the start page). THE money line, then THE question, each option its own POST (web.js POST /history). --}}
+<section class="choose">
+  {{#if funds}}{{> funds-line}}{{/if}}
+  {{> history-choice page=true action="/history" back="/people"}}
+</section>

@@ -1,0 +1,22 @@
+{{!-- THE ACCOUNT SWITCHER (X's own model: up to 5 accounts on one browser, one active, the switch global to every tab;
+      lib/sessionAccounts.js): the header's "you" opens THE DROPDOWN (public/js/dropdown.js). Its panel: you, with "↗ On X"
+      to your profile (what the header's "you" opened before it was a menu); each other account signed in here, a press
+      switching to it (POST /accounts/switch: every open tab follows, public/js/live.js); "Add an account" (a LINK: it
+      ends on x.com, which form-action 'self' would block), with the one thing to know, since X signs in whichever
+      account x.com is on; "Sign out of all" once there's more than one (the sidebar's Sign out leaves the active one).
+      Each other account wears THE COUNT (its sidebar's counts added up, routes/pages.js countOf: the number its own tab's
+      title would say), and the button a dot while any of them has one (`othersCount`, as the phone's ☰ wears one), so
+      what's waiting on another account shows without switching. Drawn with the page (their news reaches this tab's
+      stream only once switched to): it's current on every page load.
+      Context: the layout's root (account, me, otherAccounts, othersCount, canAddAccount, csrfToken). --}}
+<details class="me-menu" data-dropdown>
+  <summary class="top-me" aria-label="Accounts">{{#if othersCount}}<span class="me-face">{{> avatar person=me}}<span class="me-dot"></span></span><span class="sr-only">Something new on another account. </span>{{else}}{{> avatar person=me}}{{/if}}<span class="top-who" data-me-v="{{account.countsV}}"><span class="top-handle">@{{account.username}}</span>{{#if account.followers}} · <span class="seg"><span class="top-stat" data-me="following" data-n="{{account.following}}">{{compact account.following}}</span> following</span> · <span class="seg"><span class="top-stat" data-me="followers" data-n="{{account.followers}}">{{compact account.followers}}</span> followers</span>{{/if}}</span></summary>
+  <div class="me-panel">
+    <div class="me-row me-current">{{> avatar person=me}}<span class="me-name"><b>{{displayName me}}</b><span>@{{account.username}}</span></span>{{> post-exit user=account.username}}</div>
+    {{#each otherAccounts}}
+    <form class="me-form" method="post" action="/accounts/switch"><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="id" value="{{id}}"><button type="submit" class="me-row me-switch">{{> avatar person=this}}<span class="me-name"><b>{{displayName this}}</b><span>@{{username}}</span></span>{{#if n}}<span class="nav-count">{{count n}}<span class="sr-only"> new</span></span>{{/if}}</button></form>
+    {{/each}}
+    {{#if canAddAccount}}<a class="me-item" href="/auth/x?another=1">{{> icon-plus}}<span>Add an account<small>Switch to it on X first.</small></span></a>{{/if}}
+    {{#if otherAccounts.length}}<form class="me-form" method="post" action="/logout"><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="all" value="1"><button type="submit" class="me-item">{{> icon-signout}}<span>Sign out of all</span></button></form>{{/if}}
+  </div>
+</details>

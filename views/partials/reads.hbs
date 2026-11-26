@@ -1,0 +1,3 @@
+{{!-- What one run read, in words (services/usage.js describeReads): each kind, and how much of it X had already
+      charged for earlier that day. Context: the parts array. An empty one: the run checked and found nothing new. --}}
+{{#each this}}{{#unless @first}}<span class="sep"> · </span>{{/unless}}<span class="read-part">{{text}}{{#if note}} <span class="muted">({{note}})</span>{{/if}}</span>{{else}}<span class="muted">Nothing new</span>{{/each}}

@@ -1,0 +1,13 @@
+{{!-- HOW FAR BACK, one block for both places it's asked (routes/pages.js historyChoices, each option priced for this
+      account): the start page (`pick`: the id of its Get started form, each option a radio in it) and People turned
+      back on in Settings later (views/history.hbs: `action`, each option its own POST). `back`: where an option's
+      top-up returns. `page`: the question is the page's own heading. Each option says what it buys in one line (services/history.js), and
+      nothing explains around them (people don't read, so just the options). A read
+      can't charge past the balance whatever it costs (THE CEILING), which the last line says. `since`: asked on a
+      RESUME (views/resume.hbs, services/pause.js): when reading stopped, said under the question. --}}
+{{#if page}}<h1>How far back should {{@root.brandName}} read?</h1>{{else}}<h2 class="onboard-q">How far back should {{@root.brandName}} read?</h2>{{/if}}
+{{#if since}}<p class="note">{{#if away}}Away{{else}}Paused{{/if}} since {{shortDate since}}. Your Inbox opens once it’s read.</p>{{/if}}
+<div class="options">
+  {{#each @root.options}}{{> bulk-option pick=../pick action=../action back=../back}}{{/each}}
+</div>
+<p class="fine">{{#if @root.funds}}Charged for what’s actually read, never more than your balance. New posts keep coming whatever you pick.{{else}}Estimates of what X charges to read them. New posts keep coming whatever you pick.{{/if}}</p>

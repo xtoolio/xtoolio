@@ -1,0 +1,59 @@
+{{!-- Terms of Service, written for what this app does. MUST STAY ACCURATE
+      (policy follows code): read-only X access but for Liking's like.write, Following's follows.write and Replying's
+      tweet.write (only on your press / send; a bulk press says how many: the Inbox's "♥ Like N", a thread's "Follow N",
+      the reconciler's bulk unfollow); a prepaid balance charged per sync, paused at zero, non-refundable;
+      the deposit, top-ups and auto-refill numbers come from config (web.js `legal`), never typed here. Change the
+      effective date with the text. Section 4 is the billing terms only where the site charges (`legal.charges`,
+      METERED_BILLING_ENABLED); a copy that doesn't says so in one line. --}}
+<article class="legal">
+  <h1>Terms of Service</h1>
+  <p class="fine">Effective November 24, 2026</p>
+
+  <p>These Terms are an agreement between you and {{legal.entity}} (“{{brandName}},” “we,” “us”), which runs {{brandName}}. By signing in or using {{brandName}}, you agree to them. If you don’t, please don’t use it.</p>
+
+  <h2 class="section">1. What {{brandName}} is</h2>
+  <p>{{brandName}} is a tool that sits next to X. With your permission it reads your posts, your mentions and the conversations they belong to, and shows what you turn on, each part on its own: the Inbox (the replies, mentions and quotes that came to you), People (who you go back and forth with, and your history with each), Likes (who likes and reposts your posts) and Follows (who follows and unfollows you). It’s an independent service: it isn’t affiliated with, endorsed or sponsored by X Corp. X is a trademark of X Corp.</p>
+
+  <h2 class="section">2. Who can use it</h2>
+  <p>You must be at least 13, and old enough to use X under its own rules. Signing up may be limited to people we invite, or who have an account holder’s invite link. You use your own X account, and you’re responsible for what happens under it.</p>
+
+  <h2 class="section">3. What {{brandName}} can do with your X account</h2>
+  <p>You sign in with X, and every sign-in asks X for the same permissions: to read your posts, profile, likes and follows, and to act for you in five ways: liking and unliking posts, reposting posts and undoing a repost, following and unfollowing people, posting replies, and uploading photos, GIFs and videos to go with a reply. It can’t read your direct messages. {{brandName}} likes or unlikes a post only when you press its ♥, or a Like button that says how many it will like; reposts or undoes a repost only when you press its ↻ (reposting asks you to press twice); follows or unfollows people only when you press their Follow button, or a Follow or Unfollow button that says how many; and posts only a reply you sent, with the pictures you attached to it. Never on its own. An AI agent you connect (Settings → Agents) can read your {{brandName}} data and leave draft replies, and nothing more: a draft goes to X only if you send it. You’re responsible for the agents you connect, and you can disconnect one any time. A press that acts on several does them one after another, and stops where X’s own limits stop it. {{brandName}} keeps reading in the background after you close the page or sign out of {{brandName}}, until you pause it (in Settings, or from the header’s sync status; then nothing is read until you resume, and on resuming after more than a day you choose how far back to read what you missed, priced before you pick) or Keep syncing live is off and it has been an hour without it open (then it pauses the same way, and when you come back you choose to catch up or skip, priced before you pick), and, with Replies, live, Likes or Follows on, X sends it your new replies, mentions, posts, likes, reposts of your posts and follows of you as they happen; to stop both, revoke {{brandName}}’s access in your X settings.</p>
+
+  <h2 class="section">4. Billing</h2>
+  {{#unless legal.charges}}
+  <p>{{brandName}} doesn’t charge for its use: whoever runs it pays X for the data it reads.</p>
+  {{else}}
+  <p>{{brandName}} is <strong>pay as you go, from a prepaid balance</strong>. There’s no subscription.</p>
+  <ul>
+    <li><strong>What you pay for.</strong> X charges for the data {{brandName}} reads (your posts, mentions, the conversations around them, profiles). Each sync is charged to your balance for what it read, priced from what X charges for that data plus our markup of {{legal.markupPct}}%{{#if legal.markupCapUsd}}, and {{legal.markupAfterPct}}% after the first ${{legal.markupCapUsd}} of markup in a calendar month (UTC), until the month turns{{/if}}. Reading your history (your posts and mentions, and your likes over the same stretch, when you start, when you turn on a part that reads it, or when you read further back from Your circle) is charged at what X charges plus a {{legal.bulkPct}}% markup, which doesn’t count toward the monthly ${{legal.markupCapUsd}}. Reading the accounts you follow (to see who doesn’t follow you back), and reading who an account tags (Follows → Who they tag), are each charged like any other read, priced before they run, and never charged more than that price. What X sends as it happens (with Replies, live on, new replies, mentions and posts; with Follows on, each follow and unfollow, yours included) is charged the same way, once an hour. With Liking, Following or Replying on, each like, unlike, follow, unfollow or reply you send is charged the same way: X charges for it (a reply with a link costs more). Every charge is listed on your Usage page, with what it read and your balance after it.</li>
+    <li><strong>Your first payment.</strong> A new account starts at $0, or with the credit its invite came with, and pays at least ${{legal.depositUsd}} before its first sync unless that credit covers it. It goes onto your balance dollar for dollar, like any top-up. Every part is on when you start; you can turn parts off in Settings, each with its price shown. You choose how much of your history to read, with its price shown; you can only choose what your balance covers, and a read is never charged more than your balance holds.</li>
+    <li><strong>Running out.</strong> When your balance reaches $0, syncing pauses until you top up. A sync already running finishes, so the balance can go slightly below $0.</li>
+    <li><strong>Auto-refill.</strong> Optional, and off unless you turn it on. If you do, you authorize us to charge the card you saved the amount you chose whenever your balance drops to ${{legal.refillThresholdUsd}} or below, up to a monthly limit you choose (${{legal.refillLimitUsd}} unless you change it, or no limit): once refills in a calendar month (UTC) would pass it, there are no more that month and syncing pauses at $0. You can change the amount, the limit or the card, or turn it off, in Settings. If two charges in a row fail, auto-refill switches itself off and {{brandName}} tells you.</li>
+    <li><strong>Payments.</strong> Payments are processed by Stripe. We never see or store your full card number.</li>
+    <li><strong>Prices.</strong> We may change our prices. If we do, we’ll tell you first, and the new prices apply to syncing after they take effect.</li>
+    <li><strong>Refunds.</strong> Except where the law requires it, your prepaid balance is non-refundable, and there are no credits for syncing already done. If something went wrong, {{> contact}} and we’ll look at it fairly. Your statutory consumer rights are unaffected.</li>
+  </ul>
+  {{/unless}}
+
+  <h2 class="section">5. Your content</h2>
+  <p>What {{brandName}} shows you comes from X: your posts and other people’s. You and they keep whatever rights you have in it, and X’s terms still apply to it. We store and display it only to provide {{brandName}} to you, as described in the <a href="/privacy">Privacy Policy</a>, and, if you share your circle, on its public page: who you’re closest to, by your replies and their likes of your posts (their public names, handles and pictures, never posts or likes themselves), shown to anyone with the link until you turn it off.</p>
+
+  <h2 class="section">6. Acceptable use</h2>
+  <p>Please use {{brandName}} lawfully. Don’t use it to harass, stalk or harm anyone; don’t try to break, overload or get around its security or limits; don’t use an X account you don’t control. We may suspend or close accounts that do.</p>
+
+  <h2 class="section">7. Availability and changes</h2>
+  <p>{{#if beta}}{{brandName}} is in beta: its features and prices may change while it is. {{/if}}{{brandName}} is offered “as is” and “as available.” It’s a small service, and it may change, break or go down, including when X changes or limits its API. We may add, change or remove features, and update these Terms; if we make material changes we’ll update the effective date and, where appropriate, tell you. Using {{brandName}} after a change means you accept the updated Terms.</p>
+
+  <h2 class="section">8. Ending</h2>
+  <p>You can stop at any time: delete your account in Settings (it revokes {{brandName}}’s access on X and deletes your data, as the Privacy Policy describes; a prepaid balance isn’t refunded), or revoke {{brandName}}’s access in your X settings. We may suspend or end your access if you break these Terms, or to protect the service or others.</p>
+
+  <h2 class="section">9. Disclaimers and limitation of liability</h2>
+  <p>To the fullest extent the law allows, {{brandName}} and {{legal.entity}} disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose and non-infringement. We aren’t liable for indirect, incidental, special, consequential or punitive damages, or for lost data, profits or goodwill, arising from your use of {{brandName}}. Our total liability for any claim about {{brandName}} is limited to the greater of what you paid us in the twelve months before the claim or US $100. Some places don’t allow these limits, so parts of this section may not apply to you.</p>
+
+  <h2 class="section">10. Governing law</h2>
+  <p>These Terms are governed by the laws of {{#if legal.jurisdiction}}{{legal.jurisdiction}}{{else}}the place where {{legal.entity}} is established{{/if}}, without regard to its conflict-of-laws rules. Disputes go to the courts there, unless the law where you live says otherwise.</p>
+
+  <h2 class="section">11. Contact</h2>
+  <p>Questions about these Terms? {{> contact cap=true}}.</p>
+</article>

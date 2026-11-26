@@ -1,0 +1,15 @@
+{{!-- THE ↻ under someone else's post (each reply its own repost button; the
+      Reposting add-on, people.postView `repostable` / `youReposted`). X's way: the ↻ opens a small menu, Repost (or
+      Undo repost) and Quote (as X has), a
+      `<details data-dropdown>` (public/js/dropdown.js closes it on a choice, a click elsewhere or Esc; it opens without
+      script). The menu IS the deliberate second click X asks for, so Repost sends at once (it took THE click-again
+      confirm while the ↻ itself sent). Repost: POST /posts/:id/repost, on=1|0 so a double press can't toggle twice;
+      public/js/post-actions.js presses it in place; without script it posts and comes back to the post. The ↻ is the
+      accent while you've reposted it.
+      QUOTE OPENS X's OWN COMPOSE WINDOW on the post's link (`data-on-x`: a small window beside the page on a computer,
+      the link itself on a phone), which X shows as a quote: X's API quotes (`quote_tweet_id`) are Enterprise only, "not
+      available on self-serve (pay-per-use) tiers" (docs.x.com create-post), so a quote can't be sent
+      from here. Nothing is written or charged from here; the quote reaches the Inbox like any post of yours. INFERRED:
+      that X turns the status link in the box into a quote card (its compose screen does for a pasted one).
+      No newline at the end. --}}
+{{#if repostable}}<details class="repost-menu" data-dropdown><summary class="repost-btn{{#if youReposted}} on{{/if}}" aria-label="Repost or quote">{{> icon-repost}}</summary><div class="repost-panel"><form class="repost-form" method="post" action="/posts/{{id}}/repost" data-repost><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="back" value="{{@root.currentPath}}"><input type="hidden" name="on" value="{{#if youReposted}}0{{else}}1{{/if}}"><button type="submit" class="repost-item" aria-pressed="{{#if youReposted}}true{{else}}false{{/if}}">{{> icon-repost}}<span data-repost-word>{{#if youReposted}}Undo repost{{else}}Repost{{/if}}</span></button></form><a class="repost-item" href="https://x.com/intent/post?url=https%3A%2F%2Fx.com%2F{{#if author.username}}{{author.username}}{{else}}i{{/if}}%2Fstatus%2F{{id}}" target="_blank" rel="noopener" data-on-x>{{> icon-quote}}Quote</a></div></details>{{/if}}

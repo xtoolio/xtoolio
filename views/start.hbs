@@ -1,0 +1,45 @@
+{{!-- THE START PAGE, the onboarding (routes/pages.js startView): a WELCOME, then a wizard of two steps the server
+      picks (`start.step`): ADD MONEY (amounts as big tiles, each saying the history it pays for; LINKS, Checkout is
+      off-site and comes back here), then HOW FAR BACK and Get started, which turns everything on (POST /start). An
+      account that doesn't pay here has only the second. Nothing to choose about modules here (this
+      page is only onboarding); Settings has the switches. As few words as will do (people don't read,
+      so just the options, and crystal clear what they're buying). --}}
+<section class="onboard">
+  {{!-- The welcome (a big header with the mark and a welcome that stands out):
+        THE MARK big, its dots popping in one after another once (app.css; still under reduced motion). --}}
+  <header class="onboard-head">
+    {{> site-mark key="welcome"}}
+    <h1>Welcome to {{brandName}}</h1>
+    <p class="onboard-lede">{{#if start.handle}}@{{start.handle}}, {{/if}}{{#if start.steps}}two quick steps{{else}}one quick step{{/if}} and you’re in.</p>
+  </header>
+  {{!-- On a phone, not yet opened from the Home Screen (app.css: shown at phone width, hidden in display-mode
+        standalone): add it there and it opens like an app (the layout's manifest and apple-mobile-web-app-capable). --}}
+  <aside class="homescreen-tip">
+    <b>Add {{brandName}} to your Home Screen</b>
+    <span>It opens like an app. Safari: Share, then Add to Home Screen. Chrome: ⋮, then Add to Home screen.</span>
+  </aside>
+  {{#if start.steps}}
+    <ol class="steps">
+      <li class="{{#if (eq start.step "money")}}now{{else}}done{{/if}}">{{#if (eq start.step "money")}}<span class="step-n">1</span>Add money{{else}}<a href="/?step=money"><span class="step-n">✓</span>Balance {{dollars funds.balance}}</a>{{/if}}</li>
+      {{!-- Back to step 2 from "add more" (?step=money with money in). --}}
+      <li class="{{#if (eq start.step "history")}}now{{/if}}">{{#if funds.balance}}{{#if (eq start.step "money")}}<a href="/"><span class="step-n">2</span>How far back</a>{{else}}<span class="step-n">2</span>How far back{{/if}}{{else}}<span class="step-n">2</span>How far back{{/if}}</li>
+    </ol>
+  {{/if}}
+  {{#if (eq start.step "money")}}
+    <div class="amounts">
+      {{#each start.amounts}}<a class="amount" href="/billing/topup?amount={{whole}}&amp;back=/"><b>${{whole}}</b>{{#if covers}}<span>History: <i>{{covers}}</i></span>{{/if}}</a>{{/each}}
+    </div>
+    <p class="fine">Pay as you go: X’s price plus a markup, only for what’s used. Prepaid and non-refundable; syncing pauses at $0. <a href="/terms">Terms</a></p>
+  {{else}}
+    {{#if funds}}{{#unless funds.payable}}<p class="fine">Payments aren’t set up yet.</p>{{/unless}}{{/if}}
+    {{> history-choice pick="start-form" back="/"}}
+    <form id="start-form" class="signin-row start-form" method="post" action="/start" data-busy>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      {{#if start.regrant}}
+        <a class="signin" href="/auth/x">Sign in with X again</a><span class="fine">X asks you to allow what {{brandName}} needs.</span>
+      {{else}}
+        <button type="submit" class="signin"{{#unless start.ready}} disabled{{/unless}}>Get started</button>{{#if priced}}{{> paygo}}{{/if}}
+      {{/if}}
+    </form>
+  {{/if}}
+</section>

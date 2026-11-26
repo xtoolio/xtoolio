@@ -1,0 +1,35 @@
+{{!-- One person on Your people (views/leaderboard.hbs; the front page draws it too, services/demo.js): who, the
+      back-and-forth count it's ranked by, and the rest as facts, drawn as THE LIST ROW (.pcards.rows, app.css; the card
+      grid was deleted). The whole row opens their page (your conversations with them: drilling
+      into them wasn't obvious): THE link layer posts use (.post-open), what you can click above it, the › at its end.
+      Context: a leaderboard row
+      (people.leaderboard); @root.likes, @root.showFollows, @root.canFollow. --}}
+<li class="pcard opens" data-person-row="{{id}}"{{#if followsYou}} data-follows-you{{/if}}>
+  <a class="post-open" href="/people/{{id}}" tabindex="-1" aria-hidden="true"></a>
+  <div class="pcard-head">
+    {{!-- ↻ first (re-read their whole profile from X: it refreshes the card; the very
+          first column). No rank number: the back and forth count
+          says the order, and under another sort a rank only reads as noise. The rank still sorts the Inbox's "talk
+          with most" and its rail. --}}
+    <div class="pcard-refresh">{{> refresh-profile id=id fetchedAt=profile.fetchedAt}}</div>
+    {{!-- Their picture and name open their page; their @handle opens them on X (and copies), and THE EXIT, "↗ On X",
+          right after it, where you reach for their profile. --}}
+    <div class="who-link"><a class="who-av" href="/people/{{id}}" tabindex="-1" aria-hidden="true">{{> avatar person=this}}</a><span class="names"><a class="name" href="/people/{{id}}">{{displayName this}}</a>{{#if username}}<span class="handle">{{#if profile.name}}{{> handle username=username}}{{/if}}{{> post-exit user=username}}</span>{{/if}}</span></div>
+    <span class="pcard-score"><b>{{mutual}}</b><span>back and forth</span></span>
+  </div>
+  <dl class="facts pcard-facts">
+    {{!-- The two directions as one fact each, yours first (four columns were noise): Replies (yours to them
+          ↔ theirs to you), Likes (theirs you liked ↔ yours they liked; "–" for a side that isn't read). Each number says what it is in THE tooltip ([data-tip], app.css: which side
+          is which). --}}
+    <div class="f-replies"><dt>Replies</dt><dd class="pair"><span data-tip="From you">{{out}}</span><span class="pair-sep" aria-label="and">↔</span><span data-tip="From them">{{in}}</span></dd></div>
+    {{#if @root.likes.you}}<div class="f-likes"><dt>Likes</dt><dd class="pair"><span data-tip="Liked by you">{{likedByYou}}</span><span class="pair-sep" aria-label="and">↔</span>{{#if @root.likes.them}}<span data-tip="Liked by them">{{likedYou}}</span>{{else}}<span class="muted" data-tip="Not read">–</span>{{/if}}</dd></div>
+    {{else if @root.likes.them}}<div class="f-likes"><dt>Likes</dt><dd class="pair"><span class="muted" data-tip="Not read">–</span><span class="pair-sep" aria-label="and">↔</span><span data-tip="Liked by them">{{likedYou}}</span></dd></div>{{/if}}
+    {{!-- Where you stand, only when there's no Follow control to say it (the control reads + Follow /
+          Follow back / ✓ Following / ⇄ Mutual, as beside a name in a conversation, so the tag beside it said it twice). --}}
+    {{#if @root.showFollows}}{{#unless @root.canFollow}}<div class="f-conn"><dt>Connection</dt><dd>{{> follow-badge dash=true}}</dd></div>{{/unless}}{{/if}}
+    <div class="f-followers"><dt>Followers</dt><dd>{{compact profile.followers}}</dd></div>
+    <div class="f-last"><dt>Last</dt><dd>{{rel last always=true}}</dd></div>
+  </dl>
+  {{!-- The row's actions, its last column: THE Follow button (the Following extra) and the ›. --}}
+  <div class="pcard-actions">{{#if @root.canFollow}}{{> follow-button id=id}}{{/if}}<span class="pcard-go">{{> icon-chevron}}</span></div>
+</li>

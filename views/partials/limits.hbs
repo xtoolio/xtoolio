@@ -1,0 +1,22 @@
+{{!-- THE COUNTDOWN in the header (beside the balance, when X's limit on likes, follows or any write lets
+      you move again; then, the bulk ♥ saying "Like 4": when the full 50 come back): one entry per
+      write window X is counting down ("Likes 4/50 · resets in 12:34"), soonest first: a spent one (red), and a bulk
+      one (likes, follows, unfollows: lib/writeLimits.js `bulk`) as soon as any of it is used (quiet).
+      FOLDED behind a small stopwatch (in full they were too noisy; on phones too; they used to sit in the header
+      in full, and on a phone only a spent one): a `<details>`, so it opens without script; the stopwatch turns red
+      while any window is spent (`.spent` on the details: web.js `limitsSpent`, then limits.js). The same on a phone.
+      SPENT IS RED (it was amber), QUIETLY: using a window up (a Likestorm of 50) isn't an error. Only X REFUSING a
+      write for its limit (a toast of kind "limit") shakes it and drops the panel open, `.limits-hit` at its top (shown
+      while one is spent).
+      web.js res.locals.limits, from Account.writeLimits: no lookup. public/js/limits.js ticks it every second, redraws
+      it from LiveEvent "limits" (services/ratelimits.js), so it moves with each press on every open tab, removes an
+      entry when its window resets; THE DROPDOWN (public/js/dropdown.js) closes the panel on a click elsewhere or Esc.
+      Always drawn (empty: hidden), so script has a place to put it. --}}
+<details class="limits{{#if limitsSpent}} spent{{/if}}" data-limits data-dropdown{{#unless limits.length}} hidden{{/unless}}>
+  <summary class="btn ghost icon limits-btn" aria-label="X's limits">{{> icon-timer}}</summary>
+  <div class="limits-panel">
+    <p class="limits-hit" role="status">X’s limit reached. You can do more when it resets.</p>
+    <div class="limits-list" data-limits-list>{{#each limits}}<span class="limit{{#unless left}} spent{{/unless}}" data-ends="{{ends}}">{{words}} <b>{{left}}</b>/{{max}} · resets in <b data-clock>{{resetIn}}</b></span>{{/each}}</div>
+    <p class="limits-note">What X lets you do in each 15 minutes, and when it’s back to full.</p>
+  </div>
+</details>

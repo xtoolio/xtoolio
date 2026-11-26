@@ -1,0 +1,15 @@
+{{!-- THE CARD'S PRESSES: its own ♥ Like N and Mark done. They sit in the SEED's top-right corner
+      (partials/topic-post.hbs `head`), so the post the conversation hangs on IS the card's header; a card with no seed
+      to hang them on keeps them in a band (partials/inbox-done.hbs). Context: an Inbox row (status, conversationId,
+      replyId: the latest incoming, waitingReplies, cardLike, focus, settled).
+      Done says its STATE the way a finished reply does: a waiting card's button is the press "Mark done"; a done card's
+      (`.is-done`) wears the green "✓ Done" and reads "Reopen" under the pointer (THE Follow button's grammar, "✓
+      Following" → "Unfollow"); on a phone, a tap reopens it. post-actions.js `done` flips `.is-done`. Seen through the rail's person,
+      a waiting card has `focus` (services/inbox.js focusOn): its Done marks just their messages (`handled`, in place of
+      `through`), and data-done-person / data-others-waiting tell post-actions.js whose rail count goes and whether the
+      card stays waiting. Reopen is always the whole thread. A `settled` card (from before the Inbox's start, on a
+      post's or a person's page) has no Done: it was never in the Inbox to be marked. No newline at the end. --}}
+<span class="card-presses">{{#if cardLike}}<form id="card-like-{{cardLike.key}}" method="post" action="/inbox/like-all" data-like-all-form><input type="hidden" name="_csrf" value="{{@root.csrfToken}}">{{> rail-view person=cardLike.person post=conversationId}}{{!-- It says what ONE press likes, always the cap:
+  the card's owed likes, capped by X's window and LIKE_ALL_MAX (`likeN`). The owed count rides hidden (data-count, the
+  post row's), so the presses still move it and it hides at 0. One click (only a press over the whole view asks
+  twice: THE CLICK-AGAIN CONFIRM). --}}<button type="submit" class="btn card-like" data-zero data-rail-like data-like-key="{{cardLike.key}}" aria-label="Like what’s waiting in this conversation on X">{{> icon-heart}}<span><span class="like-word">Like </span><b data-like-n>{{count cardLike.likeN}}</b></span><span hidden data-count="rail-like-{{cardLike.key}}">{{cardLike.n}}</span></button></form>{{/if}}{{#unless settled}}<form class="done-form" method="post" action="/inbox/done" data-done data-waiting="{{waitingReplies}}"{{#if focus}} data-done-person="{{focus.who.id}}"{{#if focus.othersWaiting}} data-others-waiting{{/if}}{{/if}}><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="back" value="{{@root.currentPath}}"><input type="hidden" name="conversationId" value="{{conversationId}}">{{#if focus}}<input type="hidden" name="handled" value="{{#each focus.ids}}{{#if @index}},{{/if}}{{this}}{{/each}}">{{else}}<input type="hidden" name="through" value="{{replyId}}">{{/if}}<input type="hidden" name="on" value="{{#if (eq status "done")}}0{{else}}1{{/if}}"><button type="submit" class="btn done-btn{{#if (eq status "done")}} is-done{{/if}}"><span class="if-open">Mark done</span><span class="if-done">✓ Done</span><span class="if-reopen">Reopen</span></button></form>{{/unless}}</span>

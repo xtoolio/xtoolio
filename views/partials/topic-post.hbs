@@ -1,0 +1,22 @@
+{{!-- The post a conversation hangs on (the seed), drawn X's way, with THE POST FOOT (partials/post-foot.hbs: ♥ · ↻ ·
+      Reply · On X, its one way to X; the text, pictures and time go nowhere). In an Inbox card it IS THE CARD'S HEADER
+      (`head`: the card, partials/thread.hbs: the one post is canonical, never repeated above itself): THE
+      CORNER (.post-corner) holds the card's ♥ Like N and Mark done (partials/card-presses.hbs), the post drawn as THE
+      POST BOX (app.css .card-seed). --}}
+<article class="seed-post{{#if head}} has-head{{/if}}{{#if folded}} folded{{/if}}" id="p{{id}}">
+  {{#if head}}<div class="post-corner">{{#with head}}{{> card-presses}}{{/with}}</div>{{/if}}
+  {{> who-av person=author}}
+  <div class="seed-body">
+    {{#if gone}}
+      <p class="gone">This post isn't available on X.</p>
+    {{else}}
+      <div class="post-meta">{{> post-who}} <span class="post-dot">·</span> <time class="post-time" datetime="{{createdAt}}">{{rel createdAt}}</time>{{> follow-inline}}</div>
+      <div class="text">{{> segments}}</div>
+      {{#if media.length}}{{> media}}{{/if}}
+      {{#if quoted}}{{> quote quoted}}{{/if}}
+      {{!-- The same foot as every message (a Reply on every post); a reply sent
+            here lands at the end of the conversation, where a reload puts it (post-actions.js placeReply). --}}
+      {{> post-foot}}
+    {{/if}}
+  </div>
+</article>

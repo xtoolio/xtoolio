@@ -1,0 +1,16 @@
+{{!-- A module that's off (or on, but X took back its permission: paused), on its own page (routes/pages.js moduleOffView): what
+      it is, what it would add to this account's month (THE estimate's row, as Settings shows it: X's price), and its
+      switch, or the way back to X (a plain sign-in asks for every permission). Settings has them all. --}}
+<section class="choose">
+  <h1>{{module.label}} is {{#if module.paused}}paused{{else}}off{{/if}}</h1>
+  <div class="panel">
+    {{#with module}}
+      <div class="prow module">
+        <div class="prow-text"><span class="prow-name">{{label}}</span><span class="prow-hint{{#if paused}} warn{{/if}}">{{#if paused}}X needs your permission again.{{else}}{{hint}}{{/if}}</span></div>
+        <div class="prow-control">{{#if paused}}<a class="pill" href="/auth/x">Grant on X</a>{{else}}{{> switch toggle}}{{/if}}</div>
+        <div class="prow-cost">{{> module-cost}}</div>
+      </div>
+    {{/with}}
+  </div>
+  <p class="fine">Everything you can turn on is in <a href="/settings">Settings</a>.</p>
+</section>

@@ -1,0 +1,124 @@
+{{!-- The Inbox (`/`, routes/inbox.js + services/inbox.js): replies and mentions from the Inbox's start as conversation cards, drawn
+      exactly as a conversation is (partials/thread.hbs): what they answered as the seed, their posts and your replies
+      as chat. Tabs: Waiting / Done / All; a search, a sort, pages (the listing engine Your people
+      uses: partials/list-search.hbs, partials/pager.hbs). Every post opens on X. Done is a button you press on each
+      card ("Mark done" / Reopen, models/InboxMark.js): a like or a reply doesn't move a card. public/js/
+      post-actions.js does it in place: the card folds out of the tab it no longer belongs in, and the counts move.
+      THE RAIL (wide screens only): who in this tab and search still has a like or a reply coming from you, and how
+      many (services/inbox.js railOf), closest first; a name narrows the list to their cards (`?person=`), Everyone
+      clears it. Its numbers move as you like, answer and mark done (data-count="rail-<id>", post-actions.js). The
+      title spans the top; the rail starts level with the tabs (app.css .inbox-page). --}}
+{{!-- `listing`: the plain Waiting list (a phone shows the people / posts and hides the cards); `drilled`: one person or
+      one post picked (a phone shows their cards and a way back, never the rail). The desktop draws both as before. --}}
+{{> live-pill text="new" list="inbox"}}
+{{> owed-model}}
+<div class="inbox-page{{#if (or list.person list.post)}} drilled{{else if (eq list.show "waiting")}} listing{{/if}}">
+<header class="page-head">
+  {{#if (or list.person list.post)}}<p class="inbox-back"><a href="{{everyoneHref}}">{{> icon-back}}Inbox</a>{{#if picked}}<span class="inbox-back-who">{{> avatar person=picked}}<b>{{displayName picked}}</b></span>{{/if}}</p>{{/if}}
+  {{!-- THE BREAKDOWN (one big count looked daunting; it's likes and replies, so both, adding up to it):
+        every card's likes and replies still owed (inbox.owedTotals), together the sidebar's Inbox count (in the
+        accent). post-actions.js moves them as you like, answer and mark done. --}}
+  <div class="inbox-title"><h1>Inbox</h1>{{#if (gt (add owed.like owed.reply) 0)}}<p class="owed-split">{{#if likesKnown}}<span class="owed-like">{{> icon-heart}}<b data-count="owe-like">{{count owed.like}}</b><span class="owed-word"> to like</span></span>{{/if}}<span class="owed-reply">{{> icon-reply}}<b data-count="owe-reply">{{count owed.reply}}</b><span class="owed-word"> to reply</span></span></p>{{/if}}{{#if headSwitch}}{{> page-switch headSwitch}}{{/if}}</div>
+  {{!-- No subtitle under the title; only when X hasn't granted
+        what the ♥ and the reply need: a LINK to /auth/x (form-action 'self' would block a form ending on x.com). --}}
+  {{#if regrant}}<p class="note"><a href="/auth/x">Sign in with X again</a> to {{#if regrant.pictures}}reply with photos, GIFs and videos{{else}}like and reply{{/if}} from here.</p>{{/if}}
+</header>
+{{!-- By person or BY POST: the toggle at the rail's top; Posts lists each card still owing something by what it's about
+      (inbox.railOfPosts), most owed first, and picking one shows that card alone (`?post=`), nothing folded. --}}
+<nav class="rail{{#if byPosts}} by-posts{{/if}}" aria-label="{{#if likesKnown}}Likes and replies{{else}}Replies{{/if}} to send, by {{#if byPosts}}post{{else}}person{{/if}}">
+  <div class="seg-tabs rail-modes">{{#each railModes}}<a href="{{href}}"{{#if on}} class="on" aria-current="true"{{/if}}>{{label}} <span class="seg-n" data-count="rail-mode-{{key}}">{{count n}}</span></a>{{/each}}</div>
+  {{!-- THE COLUMNS (one number beside ♥ and ✓ read as if it counted both the like and the reply): each
+        row, a person's or a post's (the same controls at both levels), says what it owes the way the head does, ↩ N · ♥
+        N, and has its presses, ♥ and ✓, one click each:
+        partials/rail-row.hbs. The first row, Everyone / Every post, is THE row too (`rail.everyone`, key "all"): the
+        columns' totals, its ♥ the whole view's bulk like, its ✓ Mark all done in two clicks (its ♥ once
+        looked pressable and wasn't). --}}
+  {{#> rail-row rail.everyone}}<span class="rail-all" aria-hidden="true">{{#if @root.byPosts}}{{> icon-inbox}}{{else}}{{> icon-people}}{{/if}}</span><span class="rail-name">{{#if @root.byPosts}}Every post{{else}}Everyone{{/if}}</span>{{/rail-row}}
+  {{!-- ON A PHONE THIS IS THE INBOX (a main screen of the people or posts, each drilled into):
+        each row a card, the name and when on its first line (the name never gives way), their newest reply still
+        owed under it (as X's notifications summarise, `latest`), what's owed and the presses at its foot, in the same
+        place on every row (controls used by the dozen must never move).
+        The time and the preview show only there (app.css, the phone's .inbox-page.listing). --}}
+  {{#each rail.rows}}
+    {{#> rail-row}}{{#if about}}{{> avatar person=about.author}}<span class="rail-text"><span class="rail-head"><span class="rail-name rail-post">{{about.text}}</span>{{#if at}}<time class="rail-time" datetime="{{at}}">{{rel at}}</time>{{/if}}</span></span>{{else}}{{> avatar person=who}}<span class="rail-text"><span class="rail-head"><span class="rail-name">{{displayName who}}</span>{{#if at}}<time class="rail-time" datetime="{{at}}">{{rel at}}</time>{{/if}}</span>{{#if latest.text}}<span class="rail-preview">{{latest.text}}</span>{{/if}}</span>{{/if}}{{/rail-row}}
+  {{/each}}
+  {{#unless rail.rows.length}}<p class="note rail-empty">Nothing waiting. Inbox zero ✓</p>{{/unless}}
+</nav>
+{{!-- Not deferred: a phone's list is newest first, ordered before it paints (public/js/rail-order.js). --}}
+<script src="/js/rail-order.js?v={{assetV}}"></script>
+<div class="rail-main">
+
+<div class="list-head">
+  <nav class="seg-tabs" aria-label="Show">
+    {{#each tabs}}<a href="{{href}}"{{#if on}} class="on" aria-current="page"{{/if}}>{{label}} <span class="seg-n" data-count="tab-{{key}}">{{count n}}</span></a>{{/each}}
+  </nav>
+  {{!-- Where you are in the list ("1–20 of 343"); nothing at all when nothing matches (it said "None", which read like
+        a control). Every number a press changes in place carries data-count="<name>" (and a word
+        that agrees with it, data-plural): public/js/post-actions.js moves them together as a card leaves the list. --}}
+  {{!-- On a phone it hides: the tab's own count says it (the head wrapped on a phone). --}}
+  {{#if list.matched}}<span class="toolbar-count" data-list-count>{{count list.from}}–<span data-count="list-to">{{count list.to}}</span> of <span data-count="list-matched">{{count list.matched}}</span>{{#if list.q}} matching “{{list.q}}”{{/if}}</span>{{/if}}
+</div>
+
+{{!-- Two rows: the head says where you are (the tabs, how many), the toolbar holds what you can do (search, sort, and
+      on Waiting, Mark all done). On a phone the search takes its own line and the sort and Mark all share the next. --}}
+<div class="toolbar">
+  {{!-- No Replies / Mentions filter (removed: it wasn't useful): a card says when it only tagged you. --}}
+  {{> list-search action="/" placeholder="Search names and posts" q=list.q sorts=sorts keep=keep}}
+  {{!-- THE INBOX'S WINDOW (routes/inbox.js /inbox/within): a setting kept on the account, not a filter in the address
+        (it holds on every visit, and the red count follows it), so its own small POST form, saved on change. --}}
+  <form class="inbox-within" method="post" action="/inbox/within">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    <select name="within" aria-label="Which replies" data-auto-submit>
+      <option value=""{{#unless account.inboxWithin}} selected{{/unless}}>All replies</option>
+      <option value="1d"{{#if (eq account.inboxWithin "1d")}} selected{{/if}}>Last 24 hours</option>
+    </select>
+  </form>
+  {{!-- ♥ Like, then ✓ Done, in the order a card has them, to be consistent. --}}
+  {{!-- Only for MORE THAN ONE card (with one card, the presses showed twice):
+        with one, the toolbar's presses are that card's own head's, the same press twice. post-actions.js leftList
+        removes them when presses bring the list down to one. --}}
+  {{#if (gt list.matched 1)}}{{> like-all}}{{/if}}
+  {{!-- Mark all done: every Waiting card this view matches (its search, every page), up to the newest the page knew
+        of (`upTo`); in the rail's person view just their replies (routes/inbox.js done-all). Over the whole view (no
+        person or post picked) THE CLICK-AGAIN CONFIRM (it used to ask in THE modal), however many it marks; in a
+        person's view one click. Its toast's Undo puts every mark back (models/InboxUndo.js). Without script the button
+        sends it directly. --}}
+  {{#if (eq list.show "waiting")}}{{#if (gt list.matched 1)}}
+    <form class="all-done" id="all-done-form" method="post" action="/inbox/done-all" data-done-all>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      <input type="hidden" name="q" value="{{list.q}}">
+      <input type="hidden" name="person" value="{{list.person}}">
+      <input type="hidden" name="post" value="{{list.post}}">
+      <input type="hidden" name="by" value="{{list.by}}">
+      <input type="hidden" name="upTo" value="{{upTo}}">
+      {{!-- "Mark N replies done" in the People view, "Mark N posts done" in the Posts view (partials/done-unit.hbs,
+            routes/inbox.js doneUnit); a press says "Mark", ✓ Done is the finished state ("Done" on both, differing only by background, was confusing); whose they are, its question says. ONE span
+            around the words: a .btn
+            is a flex box with a gap, so loose words and spans are each a flex item. --}}
+      <button type="submit" class="btn done-btn"{{#unless (or list.person list.post)}} data-confirm="Click again to mark all done"{{/unless}}><span>Mark {{> done-unit}} done</span></button>
+    </form>
+  {{/if}}{{/if}}
+</div>
+
+{{#if threadFollow}}{{> thread-follow}}{{/if}}
+
+{{#if list.rows.length}}
+  <div class="threads" data-inbox-show="{{list.show}}">
+    {{#each list.rows}}
+      {{!-- Replies open under each message (THE POST FOOT, partials/post-foot.hbs: ♥ · ↻ · Reply · On X); the card's ♥ Like N
+            and Done sit at its top right (partials/card-presses.hbs), so a card has no foot. No link to the
+            conversation's own page (it showed the same view): the card IS the conversation, and their
+            name or picture opens their People page. --}}
+      {{> thread inboxCard=true}}
+    {{/each}}
+  </div>
+  <div data-list-pager>{{> pager pager}}</div>
+{{/if}}
+{{!-- The empty list's words, drawn always: hidden while there are cards, shown by post-actions.js when the last one
+      on the page leaves and nothing else matches (so the words live here, once). --}}
+<p class="note" data-list-empty{{#if list.rows.length}} hidden{{/if}}>{{#if list.q}}Nothing matches “{{list.q}}”.{{else if (eq list.show "waiting")}}{{#if list.post}}Nothing waiting in this one. <a href="{{everyoneHref}}">Every post</a>{{else if picked}}Nothing waiting from {{displayName picked}}. <a href="{{everyoneHref}}">Everyone</a>{{else}}Nothing waiting. Inbox zero ✓{{/if}}{{else}}Nothing here yet.{{/if}}</p>
+{{!-- LOAD EARLIER REPLIES (routes/inbox.js; services/inboxStart.js): a new Inbox opens with its newest 20 replies;
+      this, at the foot of the last page, brings in the next ones before them. --}}
+{{#if more}}<form class="inbox-more" id="inbox-more" method="post" action="/inbox/more" data-busy><input type="hidden" name="_csrf" value="{{csrfToken}}"><input type="hidden" name="back" value="{{more.back}}"><button type="submit" class="btn">Load {{more.n}} earlier {{plural more.n "reply" "replies"}}</button></form>{{/if}}
+</div>
+</div>

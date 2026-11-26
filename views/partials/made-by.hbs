@@ -1,0 +1,6 @@
+{{!-- The signed-out footer's credit line (the front page, Terms, Privacy): "Made with 🫶 in <place> by @<handle>"
+      (FOOTER_MADE_IN / FOOTER_MADE_BY in .env, never in the code; unset: no credit), then the site's own X account
+      (partials/site-x.hbs: X's logo + @xtoolio). Signed in, the sidebar's foot shows only the site's account
+      (in the app it's the product's own account with X's logo, the personal credit only signed out;
+      the sidebar used to carry the credit). No newline at the end. --}}
+{{#if (or @root.madeBy @root.siteX)}}<span class="made-by">{{#with @root.madeBy}}Made with <span aria-label="love">🫶</span> in {{place}} by <a href="https://x.com/{{handle}}" target="_blank" rel="noopener">@{{handle}}</a>{{/with}}{{#if @root.madeBy}}{{#if @root.siteX}} · {{/if}}{{/if}}{{> site-x}}</span>{{/if}}

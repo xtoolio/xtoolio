@@ -1,0 +1,30 @@
+{{!-- The reply box (the Replying extra), opened under the message it answers (partials/bubble.hbs): posts your reply on X to `replyId`
+      (POST /posts/:id/reply). public/js/post-actions.js sends it in place (your bubble joins the chat, the header's
+      balance takes the cost). The box shows no price (clean enough to screenshot; the price is in the
+      module picker's You send row); while you type, the meta line shows the length, and warns with the price only when
+      the text has a link (X's "with URL" row, 13× a plain reply). Without script it posts with a toast back.
+      `pictures` (the Pictures add-on, routes/pages.js PICTURE_RULES): photos or a GIF can go with it, added by
+      public/js/attach.js (📎, drag and drop, paste; script only: without it the box is text, as before).
+      ON A PHONE IT'S X's REPLY SCREEN (the inline composer was cramped on a phone and zoomed in; a
+      screen of its own, the message above, Reply at the top right, no zoom): its <dialog> (bubble.hbs) opens full
+      screen (`.sheet`, post-actions.js), `.reply-top` shows Cancel and Reply, and the script puts the message you're answering above the box (its face, name, words, "Replying to")
+      and your face beside it, joined by THE thread line. The text is 16px on a phone, so iOS doesn't zoom into it.
+      Hash: replyId, name (whom you're answering), to (people.replyingView: whom X tags in the reply, "Replying to @a @b
+      and 10 others", the full list in THE tooltip; the phone's sheet shows a copy of it under the message,
+      post-actions.js sheetContext),
+      linkPrice (this account's, routes/pages.js replyBox), pictures, draftText (a draft the account's agent left on the message,
+      partials/draft-line.hbs: the box opens holding it). --}}
+<form class="reply-form" method="post" action="/posts/{{replyId}}/reply" data-reply data-reply-name="{{name}}" data-link-price="{{rate linkPrice}}"{{#if pictures}} data-pictures="{{pictures}}"{{/if}}>
+  <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+  <input type="hidden" name="back" value="{{@root.currentPath}}">
+  <div class="reply-top"><button type="button" class="btn ghost reply-cancel" data-reply-cancel>Cancel</button><button type="submit" class="pill">Reply</button></div>
+  {{#if to}}<p class="replying-to" data-reply-to-line>Replying to {{#each to.shown}}<b>{{this}}</b>{{#unless @last}} {{/unless}}{{/each}}{{#if to.more}} and <b class="tip-wide" data-tip="{{to.all}}">{{to.more}} others</b>{{/if}}</p>{{/if}}
+  {{!-- THE @HANDLES IN ACCENT, as X's composer: a copy of the text drawn exactly under the box with each @handle
+        coloured (post-actions.js `mirror`), the box's own text made transparent once that copy is drawn (.compose.on);
+        the caret, the selection and typing stay the box's. Without script, the plain box. --}}
+  <div class="compose"><div class="compose-mirror" data-compose-mirror aria-hidden="true"></div><textarea name="text" rows="1" maxlength="4000" placeholder="Reply to {{name}}" aria-label="Reply to {{name}}" required>{{draftText}}</textarea></div>
+  <div class="reply-foot">
+    <span class="reply-meta" data-reply-meta></span>
+    <button type="submit" class="pill">Reply</button>
+  </div>
+</form>

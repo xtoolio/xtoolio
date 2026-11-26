@@ -1,0 +1,55 @@
+{{!-- THE LIKESTORM (routes/likestorm.js), TWO STEPS:
+      1. FIND: their @handle → POST /likestorm/find (X asked who it is now, one profile read) → this page with ?who=.
+      2. THEIR CARD, the confirmation (face, name, @handle, followers, bio), and under it the press: HOW MANY on a slider
+         (1 to what X's like window allows now, at most what the balance covers: stormChoices' `upTo`), the button
+         priced as it moves ("♥ Like 44 · ≈ $1.05": the server's estimate for each n, `data-prices`) → POST /likestorm
+         with their id → routes/pages.js answerStorm. public/js/post-actions.js likeLatest sends it streamed and says the
+         progress on the button and on the card's status line, then THE CELEBRATION: the card goes green and bursts with
+         confetti. Spent: no slider or button, "You've used X's 50 likes for now. More at 3:42 PM."; nothing the
+         balance covers: a disabled button and an "Add $X" link. Without script,
+         plain POSTs and the toast. The handle box is the front page's (.estimate-handle).
+      Context: handle, person, bio, storm { left, at, max, upTo, prices, start, price }, funds. --}}
+<header class="page-head">
+  <h1>Likestorm</h1>
+</header>
+
+<section class="panel bulk-read storm">
+  <p class="bulk-read-line">Like someone’s latest posts, as many as X allows right now.</p>
+  <form class="estimate-handle storm-find" method="post" action="/likestorm/find" data-busy>
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    <div class="handle-box"><input type="text" name="handle" value="{{#if handle}}@{{handle}}{{/if}}" placeholder="@handle" aria-label="Their X handle" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="64" required{{#unless person}} autofocus{{/unless}}></div>
+    <button class="{{#if person}}btn{{else}}pill{{/if}}" type="submit">Find</button>
+  </form>
+
+  {{#if person}}
+  <div class="storm-who" data-storm-who>
+    {{> avatar person=person large=true}}
+    <div class="storm-who-text">
+      <b class="storm-who-name">{{displayName person}}</b>
+      <span class="storm-who-sub">{{#if person.username}}@{{person.username}}{{/if}}{{#if person.profile.followers}} · {{count person.profile.followers}} {{#if (eq person.profile.followers 1)}}follower{{else}}followers{{/if}}{{/if}}</span>
+      {{#if bio.length}}<p class="storm-who-bio">{{> segments segments=bio}}</p>{{/if}}
+      <span class="storm-who-status" data-storm-status hidden></span>
+    </div>
+  </div>
+
+  {{!-- ONLY THE LIKES X HAS FREE NOW: the slider's top is what X's 15-minute window has left (routes/pages.js
+        stormRoom: never more, so a storm can't run into X's limit), said under it; spent, no slider, just when they're back. The two sentences are written here
+        once (data-left-text / data-spent-text) and post-actions.js fills them in after a storm. --}}
+  <form class="storm-form" method="post" action="/likestorm" data-like-latest data-max="{{storm.max}}" data-prices="{{json storm.prices}}"
+    data-left-text="X allows {{storm.max}} likes every 15 minutes. {left} free now." data-spent-text="You've used X's {{storm.max}} likes for now. More {at}."{{#unless storm.left}}{{#if storm.ends}} data-storm-back="{{storm.ends}}"{{/if}}{{/unless}}>
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    <input type="hidden" name="who" value="{{person.id}}">
+    {{#if storm.upTo}}
+    <label class="storm-slider"{{#unless (gt storm.upTo 1)}} hidden{{/unless}}>
+      <span class="storm-n"><b data-storm-n>{{storm.start}}</b> of their latest posts</span>
+      <input type="range" name="n" min="1" max="{{storm.upTo}}" value="{{storm.start}}" data-storm-range aria-label="How many of their posts to like">
+    </label>
+    {{/if}}
+    <p class="storm-cap" data-storm-cap>{{#if storm.left}}{{#if (gt storm.left storm.upTo)}}Your balance covers {{storm.upTo}}.{{else}}X allows {{storm.max}} likes every 15 minutes. {{storm.left}} free now.{{/if}}{{else}}You've used X's {{storm.max}} likes for now. More {{storm.at}}.{{/if}}</p>
+    {{#if storm.upTo}}<button class="pill storm-btn" type="submit">{{> icon-heart}}<span data-like-latest-label>Like {{storm.start}} · ≈ {{storm.price}}</span></button>
+    {{else if storm.left}}<button class="pill storm-btn" type="button" disabled>{{> icon-heart}}<span>Like · balance too low</span></button>
+      {{#if funds.payable}} <a class="storm-cap" href="/billing/topup?amount={{lookup funds.amounts 0}}&amp;back=/likestorm">Add ${{lookup funds.amounts 0}}</a>{{/if}}
+    {{/if}}
+  </form>
+  {{/if}}
+</section>

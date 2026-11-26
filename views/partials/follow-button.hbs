@@ -1,0 +1,15 @@
+{{!-- THE Follow button (the Following extra; drawn only where the caller checked `@root.canFollow`): "Follow back"
+      (solid) when they follow you, "+ Follow" (accent outline) when not, "✓ Following" (quiet grey) when you do, which
+      turns into a red "Unfollow" on hover. POST /people/:id/follow, on=1|0 (a double press can't toggle twice).
+      public/js/post-actions.js presses it in place and redraws the tag (partials/follow-badge.hbs) inside the same
+      [data-person-row] container, which carries data-follows-you. Without script: back to this page. Used by a Follows
+      row, a People card and a person's page. Context: followsYou, youFollow. Hash: id (theirs).
+      `.if-mutual` is the label where the button stands alone as where you two stand (beside a name in a conversation,
+      partials/follow-inline.hbs): following someone who follows you reads "⇄ Mutual" there, in the Mutual tag's colour
+      (with a mutual, "Following" too said it twice). Elsewhere it stays hidden. --}}
+<form class="follow-form" method="post" action="/people/{{id}}/follow" data-follow>
+  <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+  <input type="hidden" name="back" value="{{@root.currentPath}}">
+  <input type="hidden" name="on" value="{{#if youFollow}}0{{else}}1{{/if}}">
+  <button type="submit" class="follow-btn{{#if youFollow}} on{{/if}}" aria-pressed="{{#if youFollow}}true{{else}}false{{/if}}"><span class="if-on">Following</span><span class="if-mutual">Mutual</span><span class="if-on-hover">Unfollow</span><span class="if-off">{{#if followsYou}}Follow back{{else}}Follow{{/if}}</span></button>
+</form>

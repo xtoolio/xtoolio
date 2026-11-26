@@ -1,0 +1,31 @@
+{{!-- Usage (/usage): the balance and this month in one line, THE chart (partials/spend-chart.hbs: by day, week or month,
+      today's figure above its bars), then THE ITEMIZED FEED: every unit in one table, newest first, a page at a time
+      (partials/usage-rows.hbs: when, what it was and what it read, its cost, and the balance after it). Its next page
+      loads as the table's foot nears the screen (public/js/usage.js), or by "Older" without script (`before`). Shaped by
+      web.js usageView (money in micro-dollars, the `money` helper), the same for the owner (X's money) and an account
+      that pays (its statement). An Activity tab (by kind, at X's prices) once sat beside it and was deleted:
+      its figures had no markup, so they matched nothing a paying account was charged. --}}
+<h1>Usage</h1>
+
+{{#with usage}}
+  <div class="usage-top">
+    {{#if balance}}
+      <span class="eyebrow">{{balance.label}}</span>
+      <div class="usage-num">{{money balance.micros}}</div>
+    {{/if}}
+    <p class="usage-line"><b>{{#if month.estimated}}~{{/if}}{{money month.micros}}</b> spent in {{month.name}}{{#if month.since}} <span class="muted">since {{shortDate month.since}}, {{#if month.handover}}when this account took over the X app{{else}}when tracking began{{/if}}</span>{{/if}}{{#if topUp}} · <a href="/settings#billing">Top up</a>{{/if}}</p>
+  </div>
+
+  {{#unless chart.empty}}{{> spend-chart chart}}{{/unless}}
+
+  {{#if rows.length}}
+    <table class="board framed usage">
+      <thead><tr><th>When</th><th>What</th><th class="n">{{#if cols.atPrices}}At X’s prices{{else}}Cost{{/if}}</th>{{#if cols.balance}}<th class="n bal">Balance</th>{{/if}}</tr></thead>
+      <tbody data-usage-rows>{{> usage-rows rows=rows cols=cols}}</tbody>
+    </table>
+    {{#if next}}<p class="usage-more" data-usage-more data-next="{{next}}"><a class="btn" href="/usage?before={{next}}">Older</a></p>{{/if}}
+    <p class="fine">{{note}}</p>
+  {{else}}
+    <p class="note">Nothing yet. Every sync shows here with what it read and what it cost.</p>
+  {{/if}}
+{{/with}}

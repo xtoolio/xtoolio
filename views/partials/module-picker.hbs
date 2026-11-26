@@ -1,0 +1,126 @@
+{{!-- THE MODULE PICKER (services/estimateView.js moduleEstimate; docs/MODULES.md): the front page's cost estimator and Settings' cost
+      estimation, one partial so they can't drift. One GET form (switches and numbers submit on
+      change, public/js/autosubmit.js; with script it updates in place, data-swap): the handle whose real month prices it
+      (services/estimator.js; Settings measures your own) or two guesses, then Settings' .panel of .prow rows,
+      full width: the four modules in their fixed order, each with its assumptions, the numbers a day it rests on
+      (.reads, partials/picker-reads.hbs: no text, just rows of switches and assumptions; what a module is
+      sits in its (i)), Settings' .switch over a checkbox
+      (.switch-check), and its month (services/modulePrices.js: additive, your own profile riding on the first module
+      that's on). Then the total. Replies, live has no row: it comes with the Inbox (free for anyone but the app's
+      owner). Below the panel, the block this partial is called with: how to go on (sign in, start). `@root.cost`;
+      `@root.priced`: show prices and counts (off where nobody is charged); `measure`: show the handle box (the front
+      page; Settings already measured you). `@root.picker` (Settings: { action, title, saves, usage }): where the
+      form re-prices, its heading, `saves`: each switch belongs to its own POST form outside this one (form="module-<key>",
+      views/settings.hbs) and saves to the account, and `usage`: the total links to what was really spent. --}}
+<div class="cost" id="estimate" data-swap-part>
+  <form class="cost-form" method="get" action="{{#if @root.picker}}{{@root.picker.action}}{{else}}/#estimate{{/if}}" data-swap>
+    {{!-- The form has been used: from here the switches say what's ticked (services/estimateView.js moduleEstimate `defaultOn`). --}}
+    <input type="hidden" name="edited" value="1">
+    {{!-- The pace the picks below were made at: another handle or guess starts from its own defaults
+          (services/estimateView.js `basis`). --}}
+    <input type="hidden" name="basis" value="{{@root.cost.basis}}">
+    <h2 class="section">{{#if @root.picker}}{{@root.picker.title}}{{else}}Pay as you go{{/if}}</h2>
+    {{!-- Before Get started (estimateView accountEstimate `beforeStart`): every module priced on, the switches locked. --}}
+    {{#if @root.cost.beforeStart}}<p class="fine">Get started turns them all on. Switch them here after.</p>{{/if}}
+    {{#unless @root.picker}}{{#with @root.landing}}<p class="landing-lead"><a href="{{priceListUrl}}" target="_blank" rel="noopener">X’s own API price</a>, plus a markup. No subscription.</p>{{/with}}{{/unless}}
+    {{#if measure}}
+      {{!-- What X counted for the handle sits inside its box, at the right end, to save a line;
+            on a phone it drops just under the box. --}}
+      <div class="estimate-handle">
+        <div class="handle-box{{#if @root.cost.measured}} measured{{/if}}">
+          <input type="text" name="handle" value="{{@root.cost.handle}}" placeholder="@yourhandle" aria-label="Your X handle" autocomplete="off" spellcheck="false" maxlength="16">
+          {{!-- Only where the numbers came from: the numbers themselves are the Inbox row's first two lines. --}}
+          {{#if @root.priced}}{{#with @root.cost.measured}}<span class="handle-note">X’s count, last {{days}} days</span>{{/with}}{{/if}}
+        </div>
+        <button class="pill" type="submit">Estimate</button>
+      </div>
+    {{else}}{{#if @root.cost.handle}}<input type="hidden" name="handle" value="{{@root.cost.handle}}">{{/if}}{{/if}}
+    {{#with @root.cost}}
+      {{#if @root.priced}}
+        {{#if measured}}{{#unless ../measure}}{{#with measured}}
+          {{!-- Kept a week (services/estimator.js); Settings can measure again now (`remeasure`: POST /estimate, its form
+                outside this GET form, views/settings.hbs). --}}
+          <p class="estimate-measured{{#if @root.picker.remeasure}} has-action{{/if}}"><span>@{{handle}}, last {{days}} full days: <b>{{count written}}</b> posts a day, <b>{{count received}}</b> replies and mentions to you a day.{{#if @root.picker.remeasure}}{{#if measuredAt}} <span class="muted">Measured {{shortDate measuredAt}}.</span>{{/if}}{{/if}}</span>{{#if @root.picker.remeasure}}<button class="btn" type="submit" form="estimate-refresh">{{> icon-refresh}} Re-estimate</button>{{/if}}</p>
+        {{/with}}{{/unless}}{{else}}
+          {{#if (eq measureError "unknown")}}{{#if handle}}<p class="estimate-measured warn">X has no account @{{handle}}.</p>{{/if}}{{/if}}
+          {{#if (eq measureError "busy")}}<p class="estimate-measured warn">Estimates from accounts are used up for today.</p>{{/if}}
+          {{!-- No handle: the two guesses are the Inbox row's first two lines (services/estimateView.js moduleEstimate
+                `reads.inbox`). --}}
+        {{/if}}
+      {{/if}}
+      {{!-- `self` (the front page only): a second price column, the same switches self-hosted
+            (services/estimateView.js moduleEstimate).
+            Settings draws ONE column: what this account pays here (`owned`: the owner's own X bill). --}}
+      {{!-- THE PRICE ON THE NAME LINE (a clean row of totals, nothing else in the way; option A of three
+            rendered): every row is one grid with the same price column(s), so each
+            module's price sits on its switch-and-name line and the prices run straight down to ONE total row with
+            nothing under it. Only its assumptions hang under the name, indented to it: no line saying what a module is
+            (struck out on the render); an (i) beside the name says it instead (partials/info-tip.hbs, the
+            same MODULE_WORDS hint a module-off page shows). No "/ mo" on
+            the prices: the total says "Monthly estimate" (it was "A month").
+            Under the total, still in the card: the one-time read, and on the front page the per-item prices. --}}
+      <div class="panel picker{{#if self}} two-prices{{/if}}">
+        {{#if self}}{{#if @root.priced}}
+          {{!-- Whose month it is: the measured account's picture, name and @handle; before one is typed, a blank picture
+                beside "Cost estimator" (services/estimateView.js moduleEstimate `who`), shimmering as a
+                picture still to come (`.pk-blank`). --}}
+          <div class="pk-row pk-head"><span class="pk-label pk-who">{{#if who}}{{> avatar person=who}}<span class="pk-who-text"><span class="pk-who-name">{{displayName who}}</span><span class="pk-who-handle">@{{who.username}}</span></span>{{else}}<span class="avatar pk-blank" aria-hidden="true"></span><span class="pk-who-text"><span class="pk-who-name">Cost estimator</span></span>{{/if}}</span><span class="pk-n">Hosted</span><span class="pk-n">Self-hosted{{#if @root.beta}}<span class="pk-after">After the beta</span>{{/if}}</span></div>
+        {{/if}}{{/if}}
+        {{#each modules}}
+          <div class="pk-row pk-module">
+            <div class="pk-name"><label class="switch-check"><input type="checkbox"{{#if @root.picker.saves}} name="on" form="module-{{key}}"{{else}} name="{{key}}"{{/if}} value="1"{{#if on}} checked{{/if}}{{#if @root.cost.beforeStart}} disabled{{/if}} aria-label="{{label}}" data-auto-submit><span class="switch" aria-hidden="true"></span></label>{{label}}{{> info-tip tip=hint}}</div>
+            {{#if @root.priced}}<span class="pk-n">{{> module-cost on=on monthly=usd counted=counted bare=true}}</span>{{#if ../self}}<span class="pk-n">{{> module-cost on=on monthly=selfUsd counted=counted bare=true}}</span>{{/if}}{{/if}}
+            {{#if @root.priced}}{{#if reads.length}}<div class="pk-sub">{{> picker-reads}}</div>{{/if}}{{/if}}
+          </div>
+        {{/each}}
+        {{!-- WHAT YOU SEND (services/estimateView.js moduleEstimate `sends`, services/modulePrices.js; the
+              estimate-vs-real
+              audit: an active day's presses cost more than every module row together): the likes and replies you send,
+              at X's write price, in the sum. No switch (a blank in its place keeps the name in line): counted while the
+              Inbox or People is on (they carry the ♥ and Reply); otherwise what it would add. Settings draws this same row. --}}
+        {{#with sends}}
+          <div class="pk-row pk-module">
+            <div class="pk-name"><span class="pk-noswitch"></span>You send{{> info-tip tip=hint}}</div>
+            {{#if @root.priced}}<span class="pk-n">{{> module-cost on=counted monthly=usd bare=true}}</span>{{#if ../self}}<span class="pk-n">{{> module-cost on=counted monthly=selfUsd bare=true}}</span>{{/if}}{{/if}}
+            {{#if @root.priced}}<div class="pk-sub">{{> picker-reads}}</div>{{/if}}
+          </div>
+        {{/with}}
+        {{#if @root.priced}}
+          {{!-- The math, shown: the rows above are X's own price;
+                their sum, the markup on it (in the accent, 50% until $50 a month then 15%: services/balance.js), and
+                the two added up. ONE word for it: "markup". No markup lines where there is none (the owner). --}}
+          {{#if markup}}
+            <div class="pk-row pk-sum"><span class="pk-label">X’s price</span><span class="pk-n">{{cost x}}</span>{{#if self}}<span class="pk-n">{{cost self.total}}</span>{{/if}}</div>
+            <div class="pk-row pk-sum pk-fee"><span class="pk-label">Markup {{markup.pct}}%{{#if markup.cap}}, {{markup.afterPct}}% after ${{markup.cap}} a month{{/if}}</span><span class="pk-n">{{cost markup.usd}}</span>{{#if self}}<span class="pk-n pk-none">–</span>{{/if}}</div>
+          {{/if}}
+          <div class="pk-row pk-total"><span class="pk-label">Monthly estimate</span><span class="pk-n">{{cost total}}</span>{{#if self}}<span class="pk-n">{{cost self.total}}</span>{{/if}}</div>
+          {{!-- ONBOARDING, once (services/estimateView.js moduleEstimate `onboarding`): reading your history, at X's
+                price in both columns
+                (hosted, X's price + the history markup, 15%, apart from the monthly one; self-hosted, the owner rate).
+                With People, its "how far back?" tier is picked here (`hist`); with the Inbox alone, the week before you
+                start. Not part of the month: under its total. --}}
+          {{#with onboarding}}
+            <div class="pk-row pk-once"><span class="pk-label">Once, to start{{#unless options}}: the week before you start{{/unless}}</span><span class="pk-n">{{cost usd}}</span>{{#if ../self}}<span class="pk-n">{{cost self}}</span>{{/if}}{{#if options}}<select class="pk-once-pick" name="hist" aria-label="How much history" data-auto-submit>{{#each options}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}</div>
+          {{/with}}
+          {{!-- PER ITEM (the front page: services/estimateView.js landingView): X's price for each thing beside what it
+                costs hosted (× the
+                platform's multiplier), so the rows above can be checked by hand. The markup is the row above's. --}}
+          {{#with @root.landing}}
+            <div class="pk-row pk-head pk-section"><span class="pk-label">Per item</span></div>
+            <div class="pk-row pk-item"><span class="pk-label">A post read</span><span class="pk-n">{{rate price.post.you}}</span><span class="pk-n">{{rate price.post.x}}</span></div>
+            <div class="pk-row pk-item"><span class="pk-label">A profile read</span><span class="pk-n">{{rate price.user.you}}</span><span class="pk-n">{{rate price.user.x}}</span></div>
+            <div class="pk-row pk-item"><span class="pk-label">A like, reply or follow you send</span><span class="pk-n">{{rate price.press.you}}</span><span class="pk-n">{{rate price.press.x}}</span></div>
+            {{!-- WHAT YOU NEED, each answer under its own column (a reversal of removing it: it says what
+                  self-hosting takes in one glance). The front page only (inside @root.landing). No code link here:
+                  the page's own "The code is public" section is right below. `.pk-need-for` names the column on a phone,
+                  where each answer takes the full width. --}}
+            <div class="pk-row pk-need"><span class="pk-label">What you need</span><span class="pk-n pk-need-cell"><span class="pk-need-for">Hosted: </span>An X account</span><span class="pk-n pk-need-cell"><span class="pk-need-for">Self-hosted: </span>An X developer app, a MongoDB database and a server</span></div>
+          {{/with}}
+        {{/if}}
+      </div>
+      {{#if @root.priced}}{{#if @root.picker.usage}}<p class="pk-after">What you’ve really spent is on <a href="{{@root.picker.usage}}">Usage</a>.</p>{{/if}}{{/if}}
+    {{/with}}
+    <noscript><button class="btn" type="submit">Update</button></noscript>
+  </form>
+  <div class="cost-go">{{> @partial-block}}</div>
+</div>

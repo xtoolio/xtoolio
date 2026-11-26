@@ -1,0 +1,28 @@
+{{!-- ONE CONVERSATION, THROUGH THE ENGINE (services/conversations.js conversationCard, routes/pages.js conversationPage;
+      the Inbox is where the work happens, so a post's page and a conversation with one person get the
+      same card and presses): a
+      post of yours' page (/posts/:id, `back` to Your posts) and a person's conversation (/people/:id/c/:conv, the
+      crumbs). `card`: the Inbox's card, exactly as its one-post view draws it (the follow line above it, the card head's
+      ♥ Like N and Mark done, each reply's ♥, ↻, Reply and Mark done; public/js/post-actions.js presses them in place, and
+      with no tabs around it a card marked done stays, its button flipping, as the Inbox's All tab). `thread`: when the
+      engine has no card (nobody else wrote in it), the posts alone (people.threads' chat, or the post and its likers).
+      `rail` (a post's page with two or more writers, web.js): THE Inbox's People rail beside the card, the same rows
+      (partials/rail-row.hbs), everyone who wrote in it; a name narrows the card to them (`?person=`). It only picks
+      (`picksOnly`), and keeps people at 0 (data-rail-keeps: post-actions.js hides them on the Inbox's). Like the
+      Inbox's, it hides in a column under 1000px (app.css .with-rail). --}}
+{{> live-pill text="New in this conversation" conversation=conversationId}}
+{{> owed-model}}
+{{#if rail}}<div class="with-rail">{{/if}}
+{{#if (or back threadFollow.all)}}<div class="view-top">{{#if back}}<p class="post-back"><a href="{{back.href}}">{{> icon-back}}{{back.label}}</a></p>{{/if}}{{#if threadFollow}}{{> thread-follow}}{{/if}}</div>{{/if}}
+{{#if rail}}
+<nav class="rail" data-rail-keeps aria-label="People in this conversation">
+  {{#> rail-row rail.everyone}}<span class="rail-all" aria-hidden="true">{{> icon-people}}</span><span class="rail-name">Everyone</span>{{/rail-row}}
+  {{#each rail.rows}}
+    {{#> rail-row}}{{> avatar person=who}}<span class="rail-text"><span class="rail-head"><span class="rail-name">{{displayName who}}</span></span></span>{{/rail-row}}
+  {{/each}}
+</nav>
+{{/if}}
+<div class="threads{{#if rail}} rail-main{{/if}}">
+  {{#if card}}{{#with card}}{{> thread inboxCard=true}}{{/with}}{{else}}{{> thread thread boxed=true}}{{/if}}
+</div>
+{{#if rail}}</div>{{/if}}

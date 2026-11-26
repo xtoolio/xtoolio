@@ -1,0 +1,26 @@
+{{!-- BULK LIKE (the Inbox's toolbar, Waiting tab; routes/inbox.js likeAllFor → POST /inbox/like-all): "♥ Like N"
+      likes the N messages in this view still waiting for a like (every page, none newer than the page: `upTo`), as
+      many as X allows right now (X: 50 likes every 15 minutes, 1,000 a day per user; extras.writesLeft). Over the
+      whole view (no person or post picked, the same as the rail's Everyone) two deliberate clicks (public/js/
+      confirm.js: "Click again to like N"; it used to ask in THE modal); in a person's or a post's view, one. When X's
+      window is spent it's a disabled
+      "♥ More at 3:42 PM" (the window's reset, in your time zone), so the limit is said, never discovered. It's LIVE:
+      public/js/post-actions.js recounts N off THE OWED TABLE (partials/owed-model.hbs: what the view still owes a like,
+      and X's window) as every ♥ moves it, and counts back up by itself when X's window ends; nothing owed hides it, an
+      unlike brings it back. No tooltip on the button (tooltips are for explaining), the spent one neither (only an icon
+      or something unclear gets one, and "More at 3:42 PM" says itself).
+      Context: likeAll { n, owed, left, resetAt, q, person, post, upTo }, list.by. --}}
+<span class="like-all" data-like-all>
+{{#if likeAll}}{{#with likeAll}}
+  <form id="like-all-form" method="post" action="/inbox/like-all" data-like-all-form{{#unless n}} hidden{{/unless}}>
+    <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+    <input type="hidden" name="q" value="{{q}}">
+    <input type="hidden" name="person" value="{{person}}">
+    <input type="hidden" name="post" value="{{post}}">
+    <input type="hidden" name="by" value="{{@root.list.by}}">
+    <input type="hidden" name="upTo" value="{{upTo}}">
+    <button type="submit" class="btn like-all-btn"{{#unless (or person post)}}{{#if (gt n 1)}} data-confirm="Click again to like {{n}}"{{/if}}{{/unless}}>{{> icon-heart}}<span>Like <span data-count="like-all-n">{{count n}}</span></span></button>
+  </form>
+  <span data-like-all-spent{{#if left}} hidden{{else}}{{#unless owed}} hidden{{/unless}}{{/if}}><button type="button" class="btn like-all-btn" disabled>{{> icon-heart}}<span>More <span data-like-all-at>{{#if resetAt}}at {{clock resetAt}}{{else}}tomorrow{{/if}}</span></span></button></span>
+{{/with}}{{/if}}
+</span>

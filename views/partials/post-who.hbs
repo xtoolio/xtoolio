@@ -1,0 +1,5 @@
+{{!-- Who wrote a post, the way X heads it: their name, then their @handle (partials/handle.hbs: a link to them on X
+      and a copy button). The name opens their People page when they have one (`author.page`), like their picture.
+      No name known: the handle alone; no handle known: the name (or their id) alone. `author` is { id, username,
+      profile, page } (people.postView). Used by seed posts, quote cards and the chat's run headers. --}}
+{{#if author.profile.name}}{{#if author.page}}<a class="post-name" href="{{author.page}}">{{author.profile.name}}</a>{{else}}<span class="post-name">{{author.profile.name}}</span>{{/if}}{{#if author.username}} {{> handle username=author.username}}{{/if}}{{else if author.username}}{{> handle username=author.username}}{{else}}<span class="post-name">{{displayName author}}</span>{{/if}}

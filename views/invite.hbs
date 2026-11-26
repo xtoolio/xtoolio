@@ -1,0 +1,21 @@
+{{!-- AN INVITE LINK's page (routes/auth.js GET /i/:code; services/invites.js): who invited you (their face and name),
+      then Sign in with X carrying the code; the callback lets you in and takes one of their places. A link with no place
+      left, or none at all, says so and offers the waitlist. The waitlist page's frame (.choose.waitlist). --}}
+<section class="choose waitlist invite-page">
+  {{#if invite}}
+    <div class="invite-from">{{> avatar person=invite.from large=true}}</div>
+    {{#if invite.open}}
+      <h1>{{displayName invite.from}} invited you</h1>
+      <p>You skip the waitlist.</p>
+      <div class="signin-row"><a class="signin" href="/auth/x?invite={{invite.code}}" data-browser-tz>Sign in with X</a></div>
+    {{else}}
+      <h1>This invite is used up</h1>
+      <p>{{displayName invite.from}}’s invites are all taken. Join the waitlist instead.</p>
+      <div class="signin-row"><a class="signin" href="/waitlist">Join the waitlist</a></div>
+    {{/if}}
+  {{else}}
+    <h1>This invite link doesn’t work</h1>
+    <p>Check the link, or join the waitlist.</p>
+    <div class="signin-row"><a class="signin" href="/waitlist">Join the waitlist</a></div>
+  {{/if}}
+</section>

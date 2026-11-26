@@ -1,0 +1,21 @@
+{{#if notFound}}<p class="note">No exchanges with that person.</p>{{/if}}
+
+{{#unless notFound}}
+  <header class="page-head"><div class="head-row"><h1>Your people</h1>{{> page-switch headSwitch}}</div></header>
+
+  <div class="toolbar">
+    {{> list-search action="/people" placeholder="Search people" q=list.q sorts=sorts reverseHref=reverseHref dir=list.dir}}
+    <span class="toolbar-count">{{#if list.matched}}{{count list.from}}–{{count list.to}} of {{count list.matched}}{{else}}No one{{/if}}{{#if list.q}} matching “{{list.q}}”{{/if}}</span>
+  </div>
+
+  {{#if list.rows.length}}
+    {{!-- One row per person (partials/person-card.hbs; rows only, the card grid deleted). --}}
+    <ol class="pcards rows">
+      {{#each list.rows}}{{> person-card}}{{/each}}
+    </ol>
+
+    {{> pager pager}}
+  {{else}}
+    <p class="empty">{{#if list.q}}No one matches “{{list.q}}”. <a href="/people">Clear the search</a>{{else}}No one yet.{{/if}}</p>
+  {{/if}}
+{{/unless}}

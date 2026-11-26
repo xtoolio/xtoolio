@@ -1,0 +1,8 @@
+{{!-- ↻: re-read this one person's whole profile from X now (POST /people/:id/refresh: picture, name, counts, where you
+      two stand). A People or Follows card's first column, and beside the name on their page: it refreshes the card, not
+      one number (it used to sit beside the follower count). In place (public/js/post-actions.js): it spins,
+      then the card around it ([data-person-row]) is redrawn from the page itself and glows once, and the toast says
+      whose ("Refreshed @maya from X.": halfway down the page, a reload lost your place). THE tooltip
+      says what it does, no more. Without script, back to this page with a toast.
+      Context: { id, fetchedAt }. --}}
+<form class="refresh" method="post" data-refresh action="/people/{{id}}/refresh"><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="back" value="{{@root.currentPath}}"><button type="submit" class="btn ghost icon" data-tip="Refresh from X" aria-label="Refresh this profile from X">{{> icon-refresh}}</button></form>

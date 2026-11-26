@@ -1,0 +1,6 @@
+{{!-- THE WAY OUT TO X where there's no post foot: "↗ On X", the same words and drawn arrow as a post foot's On X
+      (partials/post-foot.hbs), so every link to X reads as one link: a person's page and rows (their profile), a
+      Your posts row and a quote card's corner (the post). The text, the pictures and the time go nowhere. It was a
+      bare arrow; before that an "Open on X" button. Context: a post view (`id`), or `user=<username>` for a person's
+      profile. --}}
+<a class="post-exit" href="https://x.com/{{#if user}}{{user}}{{else}}i/status/{{id}}{{/if}}" target="_blank" rel="noopener" aria-label="{{#if user}}Open @{{user}} on X{{else}}Open this post on X{{/if}}">{{> icon-exit}}On X</a>

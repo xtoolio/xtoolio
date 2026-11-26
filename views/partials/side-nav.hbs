@@ -1,0 +1,45 @@
+{{!-- THE SIDEBAR (signed in; the layout draws it once). The places (routes/pages.js navFor: the modules that are on, then the
+      ones that aren't, faded, each opening its page; none before Get started, on the start page), each an icon and a
+      label, with its count (in the accent) when it has one
+      ([data-tab-count]: public/js/live.js moves it, hidden at 0). Then the foot: Usage, Settings, the theme (cycles
+      light → dark → auto, POST /theme), Sign out, the fold (POST /nav: icons only, kept per account; nav.js folds it
+      at once), and under it the site's links and the credit, small and faint. It replaced the header's tabs and its ☰
+      menu. Folded, the labels hide (still read
+      by screen readers) and each item's THE tooltip (data-tip) says it, to its right; open, the labels say it and only a
+      count's tooltip shows (what the number counts; app.css). On a phone it's a drawer behind the header's ☰ (the
+      #nav-open checkbox: no script needed); folding
+      doesn't apply there. `drawn`: the front page's picture of the app (views/landing.hbs), no id (it's drawn five
+      times) and no landmark. --}}
+<aside class="side"{{#unless drawn}} id="side" aria-label="Pages"{{/unless}}>
+  <nav class="side-nav">
+    {{#each nav.items}}
+      <a class="side-link side-{{key}}{{#unless on}} off{{/unless}}{{#if current}} on{{/if}}" href="{{href}}" data-tip="{{label}}{{#unless on}} · off{{/unless}}"{{#if current}} aria-current="page"{{/if}}>{{> (lookup . "icon")}}<span class="side-label">{{label}}</span>{{#if badge}}<span class="nav-count tip-below tip-end{{#if badge.clearing}} clearing{{/if}}" data-tab-count="{{key}}"{{#unless badge.n}} hidden{{/unless}} data-tip="{{badge.tip}}"><b data-tab-n>{{count badge.n}}</b><span class="sr-only"> {{badge.sr}}</span></span>{{else}}{{#unless on}}<span class="side-off">Off</span>{{/unless}}{{/if}}</a>
+    {{/each}}
+  </nav>
+  <div class="side-foot">
+    <a class="side-link{{#if (eq @root.tab "usage")}} on{{/if}}" href="/usage" data-tip="Usage">{{> icon-usage}}<span class="side-label">Usage</span></a>
+    <a class="side-link{{#if (eq @root.tab "settings")}} on{{/if}}" href="/settings" data-tip="Settings">{{> icon-settings}}<span class="side-label">Settings</span></a>
+    {{!-- Feedback (THE modal, partials/feedback-modal.hbs; routes/feedback.js) and, for the admins, the Admin page. --}}
+    {{#unless drawn}}<button type="button" class="side-link" data-modal-open="feedback" data-tip="Feedback">{{> icon-feedback}}<span class="side-label">Feedback</span></button>{{/unless}}
+    {{#if @root.admin}}<a class="side-link{{#if (eq @root.tab "admin")}} on{{/if}}" href="/admin" data-tip="Admin">{{> icon-admin}}<span class="side-label">Admin</span></a>{{/if}}
+    <form method="post" action="/theme">
+      <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+      <input type="hidden" name="back" value="{{@root.currentPath}}">
+      <button type="submit" class="side-link" data-tip="Theme: {{#if (eq @root.theme "dark")}}Dark{{else if (eq @root.theme "light")}}Light{{else}}Auto{{/if}}">{{#if (eq @root.theme "dark")}}{{> icon-moon}}<span class="side-label">Theme: Dark</span>{{else if (eq @root.theme "light")}}{{> icon-sun}}<span class="side-label">Theme: Light</span>{{else}}{{> icon-auto}}<span class="side-label">Theme: Auto</span>{{/if}}</button>
+    </form>
+    <form method="post" action="/logout">
+      <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+      <button type="submit" class="side-link" data-tip="Sign out">{{> icon-signout}}<span class="side-label">Sign out</span></button>
+    </form>
+    <form class="side-fold" method="post" action="/nav" data-nav-fold>
+      <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+      <input type="hidden" name="back" value="{{@root.currentPath}}">
+      <input type="hidden" name="collapsed" value="{{#if nav.collapsed}}0{{else}}1{{/if}}">
+      <button type="submit" class="side-link" data-tip="{{#if nav.collapsed}}Open the sidebar{{else}}Fold the sidebar{{/if}}" aria-label="{{#if nav.collapsed}}Open the sidebar{{else}}Fold the sidebar{{/if}}">{{> icon-fold}}<span class="side-label">Fold</span></button>
+    </form>
+    {{!-- The site's links and the site's own X account, small and faint, under everything (signed in there's no
+          footer). The personal credit is the signed-out footer's alone (partials/made-by.hbs); it used to
+          sit here, subtle. Folded, they're invisible but keep their room (app.css .side-legal: nothing above moves). --}}
+    {{#unless drawn}}<p class="side-legal">{{> site-links short=true}}{{#if @root.siteX}}<span class="side-x">{{> site-x}}</span>{{/if}}</p>{{/unless}}
+  </div>
+</aside>

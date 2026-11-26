@@ -1,0 +1,4 @@
+{{!-- A quoted post, the way X shows one: a small avatar, name, @handle and time, then its text and pictures. It opens
+      on X by THE EXIT in its top-right corner (it has no foot of its own, partials/post-foot.hbs); the card itself goes
+      nowhere (the same arrow top right as everywhere; it was a link layer over the whole card). --}}
+<div class="quote">{{#unless gone}}{{> post-exit}}{{/unless}}{{#if gone}}<span class="gone">Quoted post isn't available on X.</span>{{else}}<span class="post-meta quote-meta">{{> avatar person=author small=true}}{{> post-who}}{{#if createdAt}} <span class="post-dot">·</span> <span class="post-time">{{rel createdAt}}</span>{{/if}}</span>{{#if segments.length}}<span class="text clamp">{{> segments}}</span>{{/if}}{{#if media.length}}{{> media inQuote=true}}{{/if}}{{/if}}</div>

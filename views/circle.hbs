@@ -1,0 +1,69 @@
+{{!-- YOUR CIRCLE (the sidebar's Circle; routes/people.js GET CIRCLE_PAGE, services/circle.js): the people closest to
+      you (services/circle.js ranked: your back and forth, and their likes of your posts at a third), around you; each
+      opens their People page (or X, for someone in it only by liking). Beside it, READ FURTHER BACK
+      (`further`, services/further.js: the first read's stretches, priced for the rest; or how far one has got), first,
+      titled "Fill in your circle" and saying why, while the circle isn't full (`from.full`); and
+      sharing it: a public page (/@<you>, opt in, THE switch → POST /people/circle/share) whose preview on X is a picture
+      of the circle; while it's on, the link (⧉ copies it) and "Post on X" (X's compose window with the link). --}}
+{{#*inline "further-panel"}}
+  <section class="panel circle-further" id="further">
+    {{#if further.reading}}
+      {{#with further.reading}}
+        <h2>Reading further back</h2>
+        <p class="fine">{{count read}} of {{count of}} posts and mentions read{{#if likes}}, now checking your likes over them{{/if}}. Your circle fills in as it goes.{{#if inbox}} Their replies join your Inbox when it’s done.{{/if}}</p>
+      {{/with}}
+    {{else}}
+      <h2>{{#if from.full}}Read further back{{else}}Fill in your circle{{/if}}</h2>
+      <p class="fine">{{#if from.full}}More history ranks it on more of your conversations.{{else}}Only people who reply back and forth with you or often like your posts are in it, and a ring shows once it’s full. More history brings in more people.{{/if}}</p>
+      <form id="further-form" method="post" action="/people/circle/further" data-busy>
+        <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+        <div class="options">{{#each further.choices}}{{> bulk-option pick="further-form" back="/people/circle"}}{{/each}}</div>
+        {{#if further.inboxable}}
+          <label class="further-inbox"><span class="switch-check"><input type="checkbox" name="inbox" value="1"><span class="switch" aria-hidden="true"></span></span><span><b>Also put these replies in your Inbox</b><span class="fine">Off: they show here, in People and in each conversation, already handled.</span></span></label>
+        {{/if}}
+        <button type="submit" class="pill"{{#unless further.canPick}} disabled{{/unless}}>Read</button>
+      </form>
+    {{/if}}
+  </section>
+{{/inline}}
+<header class="page-head"><h1>Your circle</h1></header>
+
+{{#if count}}
+  <div class="circle-page">
+    {{!-- THE SIZES (services/circle.js SIZES: 50, 100 or 250, the 50 drawn exactly as the
+          original circle): THE TABS, each a button of one POST form (POST /people/circle/size), over the circle. --}}
+    <div class="circle-main">
+      <form class="seg-tabs circle-sizes" method="post" action="/people/circle/size" aria-label="Size"><input type="hidden" name="_csrf" value="{{csrfToken}}">{{#each sizes}}<button type="submit" name="size" value="{{key}}"{{#if on}} class="on" aria-current="true"{{/if}}>{{key}}</button>{{/each}}</form>
+      {{> circle circle}}
+    </div>
+    <div class="circle-side">
+      {{#unless from.full}}{{#if (or further.reading further.choices.length)}}{{> further-panel}}{{/if}}{{/unless}}
+      <aside class="panel circle-share">
+        <div class="circle-share-head">
+          <div>
+            <h2>Share it</h2>
+            <p class="fine">{{#if shared}}A public page with this circle on it. Anyone with the link can see it.{{else}}A public page with this circle on it, for posting on X.{{/if}}</p>
+          </div>
+          {{> switch toggle}}
+        </div>
+        {{#if shared}}
+          <p class="circle-link"><a href="{{publicUrl}}" target="_blank" rel="noopener">{{publicUrl}}</a><button type="button" class="copy-handle" data-copy="{{publicUrl}}" aria-label="Copy the link">{{> icon-copy}}</button></p>
+        {{/if}}
+        {{!-- Post the link (X draws the share image as its card), or download that image and post it yourself: X's
+              compose link can carry text and a link, never a picture. Copy the @handles, closest first, at most 50, to
+              tag them in it (public/js/copy.js, the label says "Copied" for a moment). --}}
+        <div class="circle-actions">
+          {{#if shared}}
+            <a class="pill" href="{{postHref}}" target="_blank" rel="noopener">Post on X</a>
+            <a class="btn" href="{{imageHref}}" download="{{imageName}}">Download picture</a>
+          {{/if}}
+          {{#if handles.n}}<button type="button" class="btn copy-text" data-copy="{{handles.text}}"><span class="when-idle">Copy {{#if handles.top}}the top{{else}}all{{/if}} {{handles.n}} handles</span><span class="when-copied">Copied</span></button>{{/if}}
+        </div>
+      </aside>
+      {{#if from.full}}{{#if (or further.reading further.choices.length)}}{{> further-panel}}{{/if}}{{/if}}
+    </div>
+  </div>
+{{else}}
+  <p class="empty">Nobody yet: your circle fills in as you and other people reply to each other.</p>
+  {{#if (or further.reading further.choices.length)}}<div class="circle-side alone">{{> further-panel}}</div>{{/if}}
+{{/if}}

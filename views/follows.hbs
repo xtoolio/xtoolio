@@ -1,0 +1,30 @@
+{{!-- Follows (/follows, web.js + services/follows.js): who followed and unfollowed you, one card per event
+      (partials/follow-card.hbs, a People card), newest first, as X's live stream tells it: BEST EFFORT (the bulk operations are offered only on Not following back, where it matters).
+      Nothing re-reads what X didn't send; the follower check and its "Find out who" read were deleted. THE LIST ROW, as
+      Your people's. Tabs Recent / Followed you / Unfollowed you, a search, a
+      sort, pages (the listing engine). In the default view (`streams`) a new one arrives at the top by itself
+      (public/js/live.js); in any other view the "N new · Show" pill says so. Opening the page marks every one seen. --}}
+{{#unless streams}}{{> live-pill text="new" list="follows"}}{{/unless}}
+<header class="page-head">
+  <div class="head-row"><h1>Follows</h1>{{> page-switch headSwitch}}</div>
+  {{!-- No subtitle; only when X hasn't granted follows.write (Following comes with the Follows
+        module, so that's the one reason it's off here). --}}
+  {{#unless canFollow}}<p class="note"><a href="/auth/x">Sign in with X again</a> to follow and unfollow from here.</p>{{/unless}}
+</header>
+
+{{!-- The feed's tabs (events), and apart from them the reconciler's button (people): partials/follows-head.hbs. --}}
+{{#with head}}{{> follows-head}}{{/with}}
+{{#if list.total}}
+<div class="toolbar">
+  {{> list-search action="/follows" placeholder="Search names" q=list.q sorts=sorts reverseHref=reverseHref dir=list.dir keep=keep}}
+</div>
+{{/if}}
+
+{{!-- What live.js sends when one arrives while this page is in view: it's seen, so the tab's count stays at 0. --}}
+<form method="post" action="/follows/seen" data-seen-form hidden><input type="hidden" name="_csrf" value="{{csrfToken}}"></form>
+
+<ol class="pcards rows" data-feed="follows"{{#if streams}} data-streams{{/if}}{{#unless list.rows.length}} hidden{{/unless}}>
+  {{#each list.rows}}{{> follow-card}}{{/each}}
+</ol>
+{{#if list.rows.length}}{{> pager pager}}{{/if}}
+<p class="note" data-feed-empty{{#if list.rows.length}} hidden{{/if}}>{{#if list.q}}Nothing matches “{{list.q}}”.{{else if list.total}}None of these yet.{{else}}No follows or unfollows yet. They show up here as they happen, from when Follows was turned on: X has no history of them to fetch.{{/if}}</p>

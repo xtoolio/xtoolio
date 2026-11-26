@@ -1,0 +1,10 @@
+{{!-- Where you and the post's author stand, beside their name in a conversation (an Inbox card's chat and seed, a
+      conversation's page: where you stand beside each name, with a follow / unfollow button): THE tag
+      (partials/follow-badge.hbs: Mutual / Follows you / You follow, nothing when neither) and, with Following active (@root.canFollow), THE Follow button (partials/follow-button.hbs), small.
+      [data-person-row] + data-person-id: a press redraws every copy of this person on the page (post-actions.js
+      showFollow), since a person writes more than once in a thread. With the button the tag is hidden (.with-btn): the
+      button alone says where you stand, + Follow / Follow back / ✓ Following / ⇄ Mutual (follow-button.hbs .if-mutual;
+      "You follow ✓ Following" and "Mutual ✓ Following" said it twice). Without Following active, the tag alone.
+      Context: a post view (`author.follow`, set by people.postView only once any pair is known; never on your own
+      posts). No newline at the end. --}}
+{{#if author.follow}}<span class="msg-follow{{#if @root.canFollow}} with-btn{{/if}}" data-person-row data-person-id="{{author.id}}"{{#if author.follow.followsYou}} data-follows-you{{/if}}>{{#with author.follow}}{{> follow-badge}}{{/with}}{{#if @root.canFollow}}{{#with author.follow}}{{> follow-button id=../author.id}}{{/with}}{{/if}}</span>{{/if}}

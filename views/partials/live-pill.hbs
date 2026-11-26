@@ -1,0 +1,10 @@
+{{!-- "3 new · Show": what arrived live while this page was open (public/js/live.js shows it and counts; Show reloads
+      the page as it stands, query and all). Inbox cards never slide in by themselves: you may be reading or typing a
+      reply (docs/LIVE.md). (Likes do, in the Likes page's default view; this pill is for its other
+      views.) Hidden until something arrives; without script it never shows.
+      Params: `text` (what the pill says after the count, or alone with a conversation), and either `list` ("inbox" or
+      "likes": a list page's pill, counting every reply or mention / every like on your posts) or `conversation` (a
+      conversation's: only posts in it, no count). --}}
+<div class="live-pill-row">
+  <button type="button" class="live-pill" data-live-pill{{#if conversation}} data-live-conversation="{{conversation}}"{{else}} data-live-list="{{list}}"{{/if}} data-text="{{text}}" hidden>{{text}} · Show</button>
+</div>

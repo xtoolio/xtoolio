@@ -1,0 +1,48 @@
+{{!-- THE WAITLIST PAGE (routes/auth.js GET /waitlist; services/waitlist.js): how getting in works, explained BEFORE
+      joining (every "Join the waitlist" button lands here), then "Join the waitlist with X" (so it's clear;
+      it said "Join with X"). Someone who joined from this browser
+      (`place`) sees at the top that they're on it, or that they're in (sign in again). People are let in one at a time
+      by an admin, each told by DM (it was numbered places announced in a public post): no number,
+      no line, nothing promised. --}}
+<section class="choose waitlist">
+  {{#if place}}
+    <div class="waitlist-place{{#if place.granted}} in{{/if}}">
+      {{#if place.granted}}
+        <h1>You’re in</h1>
+        <p>Sign in with X again to get started.</p>
+        <p><a class="signin" href="/auth/x" data-browser-tz>Sign in with X</a></p>
+      {{else}}
+        <h1>You’re on the waitlist</h1>
+        <p>{{#if dms}}@{{siteX}} will DM you when you’re in.{{else}}Sign in again later to see if you’re in.{{/if}}</p>
+      {{/if}}
+    </div>
+    <h2 class="section">How it works</h2>
+  {{else}}
+    {{!-- No lead line (fewer words): the steps say it. --}}
+    <h1>Join the waitlist</h1>
+  {{/if}}
+  {{!-- THE STEPS, a few words each. --}}
+  <ol class="waitlist-steps">
+    {{!-- What X's consent screen will ask, plainly, as the bare permission:
+          features.SCOPES_JOIN, tweet.read + users.read, the least X's /2/users/me takes; X words it as
+          reading the posts and accounts you can view, so "only sees who you are" read as a mismatch. --}}
+    <li><b>Join with X.</b> It asks for X’s basic read permission, nothing else.</li>
+    {{!-- THE FOLLOW LINK (right on the waitlist page): X's own follow
+          screen for the site's account. With DMs on it's how yours gets through (X refuses a DM to someone who doesn't
+          follow the sender and doesn't take DMs from anyone). --}}
+    {{!-- With DMs on it's REQUIRED, says so, and stands out:
+          X's own solid follow button (the app's "Follow back" grammar) with a ring in the accent pulsing out of it. --}}
+    {{#if dms}}
+      <li><b>You must follow @{{siteX}}.</b> Without it, the DM can’t reach you.
+        <span class="follow-site"><a class="btn must" href="https://x.com/intent/follow?screen_name={{siteX}}" target="_blank" rel="noopener">{{> icon-x}} Follow @{{siteX}}</a></span></li>
+      <li><b>We let people in a few at a time.</b> @{{siteX}} DMs you when you’re in.</li>
+    {{else}}
+      <li><b>We let people in a few at a time.</b>{{#if siteX}} Follow @{{siteX}} for news.
+        <span class="follow-site"><a class="btn" href="https://x.com/intent/follow?screen_name={{siteX}}" target="_blank" rel="noopener">{{> icon-x}} Follow @{{siteX}}</a></span>{{/if}}</li>
+    {{/if}}
+  </ol>
+  {{!-- The "you're in" DM, drawn, only while DMs are on (`dms`: the site's account can send, services/waitlistDms.js isOn), in
+        THE text it sends (`dmText`, waitlistDms.textParts). --}}
+  {{#if dms}}{{> dm-preview}}{{/if}}
+  {{#unless place}}<div class="signin-row"><a class="signin" href="/auth/x?join=1" data-browser-tz>Join the waitlist with X</a></div>{{/unless}}
+</section>

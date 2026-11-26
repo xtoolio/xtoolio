@@ -1,0 +1,4 @@
+{{!-- How people reach us about their account (Terms, Privacy): THE one sentence, so the pages can't disagree. A DM on X
+      to CONTACT_X (config.contactX; no email), or, unset, "reach us on X". `cap`: it starts a sentence.
+      No newline at the end: it sits inside a sentence. --}}
+{{#if @root.legal.contactX}}{{#if cap}}Send{{else}}send{{/if}} a DM to <a href="https://x.com/{{@root.legal.contactX}}" target="_blank" rel="noopener">@{{@root.legal.contactX}}</a> on X{{else}}{{#if cap}}Reach{{else}}reach{{/if}} us on X{{/if}}

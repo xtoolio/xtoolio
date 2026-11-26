@@ -1,0 +1,35 @@
+{{!-- YOUR POSTS (/posts, web.js + services/likes.js postRows; the Likes module's page, "Posts" in the sidebar; it was
+      once "Likes"): every post of yours and each reply that drew something, one compact row each, full
+      width (partials/like-card.hbs), the latest activity first; a row opens the post here (/posts/:id). A search over
+      the posts and everyone's names, a sort, pages (the listing engine the Inbox uses). In the default view (`streams`:
+      no search, latest activity, page 1) a post a like just arrived on comes to the top by itself (public/js/live.js);
+      in any other view the "N new · Show" pill says so. Opening the page marks every like seen. --}}
+{{#unless streams}}{{> live-pill text="new likes" list="likes"}}{{/unless}}
+<header class="page-head">
+  <div class="head-row"><h1>Your posts</h1>{{> page-switch headSwitch}}</div>
+</header>
+
+{{!-- THE TABS: All / Posts / Replies (a reply = to someone else; your own thread going on is a post), each with its
+      count; the search and sort carry the tab (`keep`). --}}
+{{#if list.total}}
+<div class="list-head">
+  <nav class="seg-tabs" aria-label="Kinds">
+    {{#each tabs}}<a href="{{href}}"{{#if on}} class="on" aria-current="page"{{/if}}>{{label}} <span class="seg-n">{{count n}}</span></a>{{/each}}
+  </nav>
+</div>
+{{/if}}
+
+{{#if list.total}}
+<div class="toolbar">
+  {{> list-search action=path placeholder="Search posts and names" q=list.q sorts=sorts reverseHref=reverseHref dir=list.dir keep=keep}}
+</div>
+{{/if}}
+
+{{!-- What live.js sends when a like arrives while this page is in view: it's seen, so the tab's count stays at 0. --}}
+<form method="post" action="/likes/seen" data-seen-form hidden><input type="hidden" name="_csrf" value="{{csrfToken}}"></form>
+
+<div class="like-rows" data-feed="likes"{{#if streams}} data-streams{{/if}}{{#unless list.rows.length}} hidden{{/unless}}>
+  {{#each list.rows}}{{> like-card}}{{/each}}
+</div>
+{{#if list.rows.length}}{{> pager pager}}{{/if}}
+<p class="note" data-feed-empty{{#if list.rows.length}} hidden{{/if}}>{{#if list.q}}Nothing matches “{{list.q}}”.{{else}}No posts yet. Your posts show up here, with who liked, reposted and replied.{{/if}}</p>

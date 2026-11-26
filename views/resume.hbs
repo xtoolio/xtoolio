@@ -1,0 +1,8 @@
+{{!-- THE RESUME READ's question (routes/pause.js GET /resume; services/pause.js resumeOptions): how far back to read what
+      you missed while paused. THE money line, then THE question as the first read asks it (partials/history-choice.hbs:
+      each option its own POST, priced for this account, a top-up beside any the balance doesn't cover), and since when
+      reading stopped under it. --}}
+<section class="choose">
+  {{#if funds}}{{> funds-line}}{{/if}}
+  {{> history-choice page=true action="/resume" back="/resume" since=since away=away}}
+</section>

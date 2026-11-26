@@ -1,0 +1,185 @@
+<header class="page-head">
+  <h1>Settings</h1>
+  {{!-- `regrant`: an account from before that still lacks a permission sign-in now asks for. THE line under a title
+        (as the Inbox's), not a banner: it used to sit under the dropdowns as a centred tinted strip. A LINK to
+        /auth/x (form-action 'self' would block a form ending on x.com). --}}
+  {{#if regrant}}<p class="note"><a href="/auth/x">Sign in with X again</a> to allow everything {{brandName}} now asks X for.</p>{{/if}}
+</header>
+
+{{!-- Font and Time zone side by side (stacked on a phone). Each dropdown saves on change, like the panel's
+      (public/js/autosubmit.js; a Save button only without script): a new font redraws the page in it, which is the
+      preview (the Preview modal went). An unset time zone keeps its Save: the picker preselects this
+      device's zone (public/js/timezone.js), which isn't a change, so only a press can save it. --}}
+<div class="settings-row">
+  <div>
+    <h2 class="section">Font</h2>
+    <form class="pick" method="post" action="/font">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      <select name="font" aria-label="Font" data-auto-submit>
+        {{#each fonts}}<option value="{{key}}"{{#if current}} selected{{/if}}>{{name}}: {{note}}{{#if isDefault}} (default){{/if}}</option>{{/each}}
+      </select>
+      <noscript><button type="submit" class="pill">Save</button></noscript>
+    </form>
+  </div>
+  <div>
+    <h2 class="section">Time zone</h2>
+    <form class="pick" method="post" action="/timezone">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      <select name="tz" aria-label="Time zone" data-auto-submit{{#unless zone.set}} data-browser-tz{{/unless}}>
+        {{#each zone.options}}<option value="{{value}}"{{#if current}} selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+      {{#if zone.set}}<noscript><button type="submit" class="pill">Save</button></noscript>{{else}}<button type="submit" class="pill">Save</button>{{/if}}
+    </form>
+    {{#unless zone.set}}<p class="fine">Not set yet, so dates show in UTC. Saving picks this device's zone.</p>{{/unless}}
+  </div>
+</div>
+
+{{!-- ACCENT (a handful of accents, each working in both light and dark): one swatch per lib/accents.js
+      entry, each a radio that saves on change (autosubmit.js) and redraws the
+      page in it: the preview. Each swatch shows its accent in the theme you're viewing (.swatch-<key>, /look.css). --}}
+<h2 class="section">Accent</h2>
+<form class="swatches" method="post" action="/accent">
+  <input type="hidden" name="_csrf" value="{{csrfToken}}">
+  {{#each accents}}<label class="swatch swatch-{{key}}" data-tip="{{name}}{{#if isDefault}} (default){{/if}}"><input type="radio" name="accent" value="{{key}}"{{#if current}} checked{{/if}} data-auto-submit><span class="sr-only">{{name}}</span></label>{{/each}}
+  <noscript><button type="submit" class="pill">Save</button></noscript>
+</form>
+
+{{!-- COST ESTIMATION (always called an estimate; its total links to Usage, the real spend): THE module picker, the
+      front page's own, literally the same, priced by THE estimate for your real month on X
+      (services/estimateView.js accountEstimate) with your own
+      switches. Each switch saves to this account: it belongs to its own small POST form below (form="module-<key>",
+      outside the picker's GET form, which only re-prices the per-day guesses in place). No Buttons panel: liking,
+      replying and following come with the modules that show them, every permission asked for at sign-in
+      (services/features.js); one missing is the line under the title. --}}
+{{#> module-picker}}{{/module-picker}}
+{{#each cost.modules}}<form id="module-{{key}}" method="post" action="/modules/{{key}}" hidden><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"></form>{{/each}}
+<form id="estimate-refresh" method="post" action="/estimate" hidden><input type="hidden" name="_csrf" value="{{csrfToken}}"></form>
+
+{{!-- THE PAUSE (routes/pause.js, services/pause.js): one switch for everything the modules read in the background.
+      Off: nothing is read and Live stops (your pages stay; a ♥ or a reply you press still goes). On again after more
+      than a day: how far back to read what you missed, first. --}}
+{{#if syncing}}
+  <div class="panel no-cost">
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">Syncing</span><span class="prow-hint">{{#if syncing.on}}Pause to stop reading from X. Your pages stay.{{else}}{{#if syncing.away}}Away{{else}}Paused{{/if}} since {{shortDate syncing.since}}. Nothing is read.{{/if}}</span></div>
+      <div class="prow-control">{{> switch syncing.toggle}}</div>
+    </div>
+    {{!-- KEEP SYNCING LIVE (services/away.js): the Inbox's title row has it too. --}}
+    {{#with keepLive}}
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">{{label}}</span><span class="prow-hint">{{hint}}</span></div>
+      <div class="prow-control">{{> switch toggle}}</div>
+    </div>
+    {{/with}}
+    {{!-- THE INBOX'S WINDOW: the Inbox toolbar's "Last 24 hours" as a switch (a phone's Inbox has no toolbar). --}}
+    {{#with inboxDay}}
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">Inbox: last 24 hours only</span><span class="prow-hint">Only replies from the last day. The count follows.</span></div>
+      <div class="prow-control">{{> switch toggle}}</div>
+    </div>
+    {{/with}}
+  </div>
+{{/if}}
+
+{{!-- AGENTS (routes/agents.js, services/agentConnections.js): your own AI reading your data here and leaving drafts you
+      send. While the Inbox or People is on (they're what it reads). First the address an app signs in with (claude.ai,
+      ChatGPT, Claude Code, Cursor: they find the sign-in by themselves, services/agentOAuth.js), then every connection
+      with its Disconnect (one click), then a token for code or an app that can't sign in. --}}
+{{#if agents}}
+  <h2 class="section with-ico" id="agents">{{> icon-agent}}Agents</h2>
+  <p class="panel-lede fine">Connect your own AI (Claude, ChatGPT, Cursor…) to read your Inbox, people and posts, and to leave draft replies for you to send. It can’t post, like or follow. Free.</p>
+  <div class="panel no-cost">
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">Connect an app</span><span class="prow-hint">Add a connector with this address in Claude, ChatGPT or your editor, then approve it here.</span></div>
+      <div class="prow-control"><code class="field copy-field">{{agents.url}}</code><button type="button" class="btn copy-text" data-copy="{{agents.url}}"><span class="when-idle">Copy</span><span class="when-copied">Copied</span></button></div>
+    </div>
+    {{#each agents.list}}
+      <div class="prow">
+        <div class="prow-text"><span class="prow-name">{{name}}</span><span class="prow-hint">{{#if (eq kind "app")}}Signed in{{#if place}} from {{place}}{{/if}}{{else}}Token{{/if}} · connected {{shortDate createdAt}} · {{#if lastUsedAt}}used {{ago lastUsedAt}}{{else}}not used yet{{/if}}</span></div>
+        <div class="prow-control"><form method="post" action="/agents/{{id}}/disconnect"><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><button type="submit" class="btn ghost danger">Disconnect</button></form></div>
+      </div>
+    {{/each}}
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">Make a token</span><span class="prow-hint">For your own code, or an app that can’t sign in. Shown once.</span></div>
+      <div class="prow-control"><form method="post" action="/agents"><input type="hidden" name="_csrf" value="{{csrfToken}}"><input class="field agent-name" name="name" maxlength="40" placeholder="What it’s for" aria-label="What the token is for"><button type="submit" class="btn">Make</button></form></div>
+    </div>
+  </div>
+{{/if}}
+
+{{!-- INVITES (services/invites.js): your one link, quiet. Whoever signs in through it skips the waitlist, up to `max`
+      people; the faces of who came in. Only while sign-up is closed. --}}
+{{#with invites}}
+  <h2 class="section" id="invites">Invites</h2>
+  <div class="panel no-cost">
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">Invites left <b class="prow-figure">{{left}} of {{max}}</b></span><span class="prow-hint">{{#if left}}Whoever signs in with your link skips the waitlist.{{else}}All used.{{/if}}</span></div>
+      {{#if left}}<div class="prow-control"><code class="field copy-field">{{url}}</code><button type="button" class="btn copy-text" data-copy="{{url}}"><span class="when-idle">Copy</span><span class="when-copied">Copied</span></button></div>{{/if}}
+    </div>
+    {{#if people.length}}
+      <div class="prow">
+        <div class="prow-text"><span class="prow-name">Joined</span></div>
+        <div class="prow-control invite-faces">{{#each people}}{{> who-av person=this tip=true}}{{/each}}</div>
+      </div>
+    {{/if}}
+  </div>
+{{/with}}
+
+
+{{!-- Money, its own panel: only for an account that pays (billing on, not the owner). --}}
+{{#if funds}}
+  <h2 class="section" id="billing">Billing</h2>
+  <div class="panel">
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">Balance <b class="prow-figure">{{dollars funds.balance}}</b></span>{{#if hasReceipts}}<span class="prow-hint"><a href="/settings/receipts">Receipts</a></span>{{/if}}</div>
+      <div class="prow-control">{{#if funds.payable}}{{#each funds.amounts}}<a class="btn" href="/billing/topup?amount={{this}}&amp;back=/settings%23billing">Add ${{this}}</a>{{/each}}{{else}}<span class="muted">Payments aren't set up yet.</span>{{/if}}</div>
+      <div class="prow-cost"></div>
+    </div>
+    {{#if refill}}
+      <div class="prow">
+        <div class="prow-text"><span class="prow-name">Auto-refill</span><span class="prow-hint{{#if (or refill.lastError refill.limitHit)}} warn{{/if}}">{{#if refill.lastError}}{{#if refill.switchedOff}}Off after two failed charges{{else}}The last charge failed{{/if}}: {{refill.lastError}}.{{else if refill.limitHit}}This month's ${{refill.limit}} limit is reached. It refills again on the 1st.{{else if refill.card}}At {{refill.threshold}}, {{refill.card}} is charged.{{else}}At {{refill.threshold}}, charge a card so syncing never pauses.{{/if}}</span></div>
+        <div class="prow-control">
+          {{#if refill.card}}
+            {{!-- The amount and THE MONTHLY LIMIT (services/autoRefill.js LIMITS: refills a calendar month add up to at most
+                  it; "No limit" is a choice): one form, each saving on change. --}}
+            <form method="post" action="/billing/autorefill"><input type="hidden" name="_csrf" value="{{csrfToken}}">
+              <select name="amount" aria-label="Refill amount" data-auto-submit>{{#each refill.options}}<option value="{{amount}}"{{#if selected}} selected{{/if}}>${{amount}}</option>{{/each}}</select>
+              <select name="limit" aria-label="Monthly limit" data-auto-submit>{{#each refill.limits}}<option value="{{amount}}"{{#if selected}} selected{{/if}}>{{#if amount}}Up to ${{count amount}} a month{{else}}No monthly limit{{/if}}</option>{{/each}}</select>
+              <noscript><button type="submit" class="btn">Save</button></noscript>
+            </form>
+            <a class="btn ghost" href="/billing/card?{{#if refill.lastError}}enable=1&amp;{{/if}}back=/settings%23billing">{{#if refill.lastError}}Use another card{{else}}Change card{{/if}}</a>
+          {{/if}}
+          {{> switch refill.toggle}}
+        </div>
+        <div class="prow-cost"></div>
+      </div>
+    {{/if}}
+  </div>
+{{/if}}
+
+{{!-- DELETE ACCOUNT (routes/account.js → services/deleteAccount.js, the whole cascade): the last thing on Settings.
+      THE modal asks for the @handle typed out (the server checks it; nothing is deleted on a mismatch), says what
+      goes and what stays, and a paying account's balance going with it. Not for the deployment's owner (it pays X).
+      "Danger zone" / "Delete your account", the row saying in a line what goes and that a balance isn't refunded
+      (kept simple). --}}
+{{#if deletable}}
+  <h2 class="section" id="delete">Danger zone</h2>
+  <div class="panel no-cost">
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">Delete your account</span><span class="prow-hint">Removes everything {{brandName}} keeps for you and its access to your X.{{#if funds}} Your balance isn’t refunded.{{/if}} Your posts on X stay.</span></div>
+      <div class="prow-control"><button type="button" class="btn danger" data-modal-open="delete-account">Delete</button></div>
+    </div>
+  </div>
+  {{#> modal id="delete-account" title="Delete your account?"}}
+    <p class="modal-lead">This can’t be undone.</p>
+    <p class="fine">Your settings, Inbox marks, drafts, likes and follows recorded here, usage and balance history, and agent connections are deleted, and {{brandName}}’s access on X is revoked. Public posts and profiles other accounts’ conversations show stay in the shared store, as on X.{{#if funds.balance}} Your <b>{{dollars funds.balance}}</b> balance is prepaid and non-refundable, so it goes too.{{/if}}{{#if funds}} Stripe keeps your receipts.{{/if}}</p>
+    <form class="delete-form" id="delete-form" method="post" action="/account/delete" data-busy>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      <label class="fine" for="delete-confirm">Type <b>@{{account.username}}</b> to confirm</label>
+      <input class="field" id="delete-confirm" name="confirm" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+    </form>
+    <div class="modal-actions">
+      <form method="dialog"><button class="btn">Cancel</button></form>
+      <button type="submit" form="delete-form" class="pill danger">Delete my account</button>
+    </div>
+  {{/modal}}
+{{/if}}

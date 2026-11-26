@@ -1,0 +1,12 @@
+{{!-- THE FOLLOWS HEAD (web.js followsHead), on the feed (views/follows.hbs) and the reconciler's page
+      (views/follows-back.hbs): ONE row of THE TABS, Recent / Followed you / Unfollowed you / Not following back. The
+      reconciler is the fourth tab (with THE TABS: fewer rows wrapping; it used to be its own
+      button beside the tabs, which on a phone took a second line). No counts (they can't be complete: X
+      has no follow history, only what
+      arrived live; the reconciler's counted only the default threshold's). Then Who they tag (routes/tagged.js):
+      people to follow, found in someone else's posts. Context: { tabs, back, tags }. --}}
+<div class="list-head follows-head">
+  <nav class="seg-tabs" aria-label="Follows">
+    {{#each tabs}}<a href="{{href}}"{{#if on}} class="on" aria-current="page"{{/if}}>{{label}}</a>{{/each}}{{#with back}}<a href="{{href}}"{{#if on}} class="on" aria-current="page"{{/if}}>Not following back</a>{{/with}}{{#with tags}}<a href="{{href}}"{{#if on}} class="on" aria-current="page"{{/if}}>Who they tag</a>{{/with}}
+  </nav>
+</div>

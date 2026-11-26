@@ -1,0 +1,8 @@
+{{!-- THE CARD'S BAND, only for a card with no seed to be its header (what they answered isn't stored, or is gone): the
+      card's presses (partials/card-presses.hbs) in a strip opening the card, sticky under the header while the card is
+      on screen. Every other card's presses sit in its seed's corner (partials/topic-post.hbs `head`: the one post is
+      canonical, never doubled up): the band repeated the seed's words above
+      the seed itself (`about`, its face and first words), and went with that. Its LEFT carries the card's `note` ("Mentioned
+      you"), which partials/thread.hbs then doesn't draw again (without it, the band was an empty row with
+      only Mark done on it). Drawn FIRST in the card (partials/thread.hbs, inboxCard). Context: an Inbox row. --}}
+<div class="card-done">{{#if note}}{{> noteLine}}{{/if}}{{> card-presses}}</div>

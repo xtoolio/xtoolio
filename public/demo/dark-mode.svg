@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750">
+  <!-- The front page's invented post picture (services/demo.js): an app in dark mode, shapes only. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1e1b4b"/><stop offset="1" stop-color="#0f172a"/></linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#sky)"/>
+  <circle cx="1010" cy="150" r="70" fill="#fde68a"/>
+  <circle cx="1040" cy="130" r="62" fill="#1e1b4b"/>
+  <rect x="120" y="120" width="760" height="520" rx="28" fill="#111827" stroke="#334155" stroke-width="3"/>
+  <rect x="120" y="120" width="190" height="520" rx="28" fill="#0b1220"/>
+  <rect x="150" y="170" width="120" height="18" rx="9" fill="url(#glow)"/>
+  <rect x="150" y="215" width="100" height="14" rx="7" fill="#334155"/>
+  <rect x="150" y="250" width="110" height="14" rx="7" fill="#334155"/>
+  <rect x="150" y="285" width="90" height="14" rx="7" fill="#334155"/>
+  <rect x="350" y="165" width="300" height="30" rx="15" fill="#e2e8f0"/>
+  <rect x="350" y="230" width="490" height="120" rx="18" fill="#1f2937"/>
+  <circle cx="395" cy="275" r="22" fill="#38bdf8"/>
+  <rect x="435" y="262" width="220" height="14" rx="7" fill="#94a3b8"/>
+  <rect x="435" y="290" width="330" height="14" rx="7" fill="#475569"/>
+  <rect x="350" y="375" width="490" height="120" rx="18" fill="#1f2937"/>
+  <circle cx="395" cy="420" r="22" fill="#f472b6"/>
+  <rect x="435" y="407" width="180" height="14" rx="7" fill="#94a3b8"/>
+  <rect x="435" y="435" width="290" height="14" rx="7" fill="#475569"/>
+  <rect x="690" y="530" width="150" height="44" rx="22" fill="url(#glow)"/>
+</svg>

@@ -1,0 +1,82 @@
+{{!-- Follows → Not following back (/follows/back, web.js + services/following.js: THE FOLLOW RECONCILER). The accounts
+      you follow that don't follow you back, under a follower threshold, smallest first, each a Follows card (kind
+      "back") whose Follow button unfollows, and a pick box for the bulk unfollow. The list is driven by its THRESHOLD,
+      so the toolbar is that filter first and no search box (`noSearch`). The read that finds them (reading the
+      accounts you follow from X, priced on the spot for this account, never charged past its quote: web.js
+      followingChoices) is, before the first one, a panel of its choices (partials/bulk-option.hbs); after it, ONE line
+      at the toolbar's right, when it was checked and AT MOST ONE button (`again`): "Read the other N" after a partial
+      read (THE REST, from where it stopped), "Check again" only when the Follows module was turned on since; none
+      after a whole read, which Live's follow events keep current. While the worker reads it (`reading`:
+      services/followingReads.js), that line counts up instead ([data-following-read], public/js/live.js) and the page
+      reloads with the toast when it's done. Drawn from the stored pairs, so the threshold is free to change. --}}
+<header class="page-head">
+  <div class="head-row"><h1>Follows</h1>{{> page-switch headSwitch}}</div>
+  {{#unless canFollow}}<p class="note"><a href="/auth/x">Sign in with X again</a> to follow and unfollow from here.</p>{{/unless}}
+</header>
+
+{{!-- The same head as the feed's (partials/follows-head.hbs), its own button pressed. --}}
+{{#with head}}{{> follows-head}}{{/with}}
+
+{{#*inline "reading"}}<span class="recheck-when" data-following-read>Reading who you follow · <span data-following-n>{{text}}</span> of {{count budget}}</span>{{/inline}}
+{{#unless listed}}
+<section class="panel bulk-read">
+  {{#if reading}}
+  <p class="bulk-read-line">{{#with reading}}{{> reading}}{{/with}}</p>
+  {{else}}
+  <p class="bulk-read-line"><b>Who doesn’t follow you back?</b> Check the accounts you follow on X.</p>
+  <div class="options">
+    {{#each choices}}{{> bulk-option action="/follows/back/read" back="/follows/back"}}{{/each}}
+  </div>
+  {{/if}}
+</section>
+{{/unless}}
+
+{{#if listed}}
+<div class="toolbar">
+  {{#> list-search action="/follows/back" noSearch=true sorts=sorts reverseHref=reverseHref dir=list.dir keep=keep}}
+    <select name="under" aria-label="Their followers" data-auto-submit>{{#each unders}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select>
+  {{/list-search}}
+  <span class="recheck">
+    {{#if reading}}{{#with reading}}{{> reading}}{{/with}}{{else}}
+    <span class="recheck-when">Checked {{#unless listed.complete}}your newest {{count listed.read}} {{/unless}}{{ago listed.listedAt}}{{#if listed.complete}}{{#unless again}} · kept current live{{/unless}}{{/if}}</span>
+    {{#with again}}
+    <form method="post" action="/follows/back/read" data-busy>
+      <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+      <input type="hidden" name="key" value="{{key}}">
+      <button type="submit" class="btn"{{#unless affordable}} disabled{{/unless}}>{{button}} · {{cost price}}</button>
+    </form>
+    {{#unless affordable}}{{#if topup}}{{#if @root.funds.payable}}<a class="pill" href="/billing/topup?amount={{topup}}&amp;back=/follows/back">Add ${{topup}}</a>{{/if}}{{/if}}{{/unless}}
+    {{/with}}
+    {{/if}}
+  </span>
+</div>
+{{!-- BULK UNFOLLOW (a form to unfollow them in bulk, in a colour of its own;
+      a reversal of an earlier one press each). Each card's checkbox belongs to this form (form=
+      "unfollow-many"); the red button asks first in THE modal, whose own button sends it. At most `unfollowMax` a
+      press (X allows about that many unfollows per 15 minutes; web.js stops cleanly at X's limit), and only accounts on
+      this list (the route checks). public/js/pick.js counts the picks and selects a page; public/js/post-actions.js
+      sends it in place (the modal's button spins until X is done, then the unfollowed cards fold out and the tab's
+      count moves); without script the button sends what's checked and the page reloads with the toast. --}}
+{{#if picking}}{{#if list.rows.length}}
+<form class="pick-bar" id="unfollow-many" method="post" action="/follows/back/unfollow" data-busy data-unfollow-many>
+  <input type="hidden" name="_csrf" value="{{csrfToken}}">
+  <input type="hidden" name="back" value="{{currentPath}}">
+  <label class="pick-all"><input type="checkbox" data-pick-all> Select all on this page</label>
+  <span class="pick-note">Up to {{unfollowMax}} at a time: X allows that many unfollows every 15 minutes{{#if (eq unfollowLeft 0)}}, and they’re used up: the timer at the top says when more come{{else if unfollowLeft}}, {{unfollowLeft}} left now{{/if}}.</span>
+  <button type="submit" class="pill danger" data-modal-open="unfollow-confirm" data-pick-go>Unfollow <span data-count="picked">0</span> selected</button>
+</form>
+{{#> modal id="unfollow-confirm" title="Unfollow them on X?"}}
+  <p class="modal-lead">You'll stop following <b data-count="picked">0</b> <span data-plural="picked" data-one="account" data-many="accounts">accounts</span> on X, one after another.</p>
+  <p class="fine">{{rate unfollowEach}} each, charged as they go. If X’s limit runs out partway, the rest stay followed until you try again. To undo, follow them again one by one.</p>
+  <div class="modal-actions">
+    <form method="dialog"><button class="btn">Cancel</button></form>
+    <button type="submit" form="unfollow-many" class="pill danger">Unfollow <span data-count="picked">0</span></button>
+  </div>
+{{/modal}}
+{{/if}}{{/if}}
+<ol class="pcards rows"{{#unless list.rows.length}} hidden{{/unless}}>
+  {{#each list.rows}}{{> follow-card}}{{/each}}
+</ol>
+{{#if list.rows.length}}{{> pager pager}}{{/if}}
+{{#unless list.rows.length}}<p class="note">Everyone you follow{{#if underWords}} with {{underWords}}{{/if}} follows you back{{#unless listed.complete}}, among your newest {{count listed.read}}{{/unless}}.</p>{{/unless}}
+{{/if}}

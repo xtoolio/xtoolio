@@ -1,0 +1,41 @@
+{{!-- One follow or unfollow of you (services/follows.js followRows), as a People card (in Your people's style;
+      the same .pcard markup as partials/person-card.hbs, drawn as THE LIST
+      ROW, .pcards.rows, like it). The head: who (picture and name open their People page when they have
+      one, else X; the @handle opens X and copies, and THE EXIT, "↗ On X", right after it: where you reach for their
+      profile), and in the score's place what happened: "Followed you" (green) /
+      "Unfollowed you" (red) with when. The facts: Connection, where you two stand NOW (partials/follow-badge.hbs, `dash`),
+      their followers, how many they follow. At the end THE Follow button (the Following extra: `@root.canFollow`).
+      `fresh`: arrived since you last opened Follows. Kind "back" (services/following.js, the reconciler): someone you
+      follow who doesn't follow you back, no event, so no "what happened"; the Follow button (you follow them) unfollows.
+      Kind "tagged" (services/tagged.js, Who they tag): someone another account's posts @-tag, and how many of them
+      (`tagged`). The pick box belongs to the page's bulk form, `pickForm` (the row's, else `@root.pickForm`,
+      "unfollow-many" when neither), and says `pickVerb` the same way (unfollow / follow); `picked`: drawn checked (the
+      front page's drawing of a press about to happen). --}}
+<li class="pcard fcard is-{{kind}}{{#if fresh}} fresh{{/if}}{{#if person.page}} opens{{/if}}" data-feed-row="{{id}}" data-person-row="{{person.id}}"{{#if followsYou}} data-follows-you{{/if}}>
+  {{!-- Someone you talk with (a People page): the whole card opens it, as on Your people. The › is always drawn and
+        hidden on a card that doesn't open (.none), so every card's buttons line up. --}}
+  {{#if person.page}}<a class="post-open" href="{{person.page}}" tabindex="-1" aria-hidden="true"></a>{{/if}}
+  <div class="pcard-head">
+    {{!-- The reconciler's pick (`@root.picking`, views/follows-back.hbs; or the row's own `picking`, the front page's
+          drawing of it): one of the accounts "Unfollow selected" sends, a field of that form from out here
+          (form="unfollow-many"). --}}
+    {{#if (or @root.picking picking)}}<label class="pick-one"><input type="checkbox" name="ids" value="{{person.id}}" form="{{#if pickForm}}{{pickForm}}{{else if @root.pickForm}}{{@root.pickForm}}{{else}}unfollow-many{{/if}}" data-pick aria-label="Pick {{displayName person}} to {{#if pickVerb}}{{pickVerb}}{{else if @root.pickVerb}}{{@root.pickVerb}}{{else}}unfollow{{/if}}"{{#if picked}} checked{{/if}}></label>{{/if}}
+    {{!-- ↻ first, as on a People card: re-read their profile from X, follower counts and where you two stand included
+          (in case someone notices a discrepancy). --}}
+    <div class="pcard-refresh">{{> refresh-profile id=person.id fetchedAt=person.profile.fetchedAt}}</div>
+    <div class="who-link">{{> who-av person=person}}<span class="names">{{#if person.page}}<a class="name" href="{{person.page}}">{{displayName person}}</a>{{else if person.username}}<a class="name" href="https://x.com/{{person.username}}" target="_blank" rel="noopener">{{displayName person}}</a>{{else}}<span class="name">{{displayName person}}</span>{{/if}}{{#if person.username}}<span class="handle">{{#if person.profile.name}}{{> handle username=person.username}}{{/if}}{{> post-exit user=person.username}}</span>{{/if}}</span></div>
+    {{!-- What happened, for an event. A reconciler card says nothing here: its tab already says it, and Connection
+          ("You follow") is the fact that changes when you unfollow. --}}
+    {{#if tagged}}<span class="pcard-score fcard-what"><b>Tagged {{tagged}}×</b>{{#if lastAt}}<time datetime="{{lastAt}}">{{rel lastAt always=true}}</time>{{/if}}</span>{{/if}}
+    {{#if at}}<span class="pcard-score fcard-what"><b>{{#if (eq kind "follow")}}Followed you{{else}}Unfollowed you{{/if}}</b><time datetime="{{at}}">{{rel at always=true}}</time></span>{{/if}}
+  </div>
+  <dl class="facts pcard-facts">
+    {{!-- Where you stand, only when there's no Follow control to say it (it reads ⇄ Mutual / Follow back / ✓ Following /
+          + Follow). --}}
+    {{#unless @root.canFollow}}<div class="f-conn"><dt>Connection</dt><dd>{{> follow-badge dash=true}}</dd></div>{{/unless}}
+    {{!-- Following, then Followers: X's own order (the header's first). --}}
+    <div class="f-following"><dt>Following</dt><dd>{{#if person.profile}}{{compact person.profile.following}}{{else}}–{{/if}}</dd></div>
+    <div class="f-followers"><dt>Followers</dt><dd>{{#if person.profile}}{{compact person.profile.followers}}{{else}}–{{/if}}</dd></div>
+  </dl>
+  <div class="pcard-actions">{{#if @root.canFollow}}{{> follow-button id=person.id}}{{/if}}<span class="pcard-go{{#unless person.page}} none{{/unless}}">{{> icon-chevron}}</span></div>
+</li>

@@ -1,0 +1,8 @@
+{{!-- A DRAFT on a message (models/Draft.js; services/inbox.js draftOf): one quiet line under it in the accent,
+      "✎ Draft from Claude Code" then its words on one line, and ✕. The line IS the message's Reply (`data-reply-to`):
+      with Replying it opens THE composer, whose box already holds the words (reply-box.hbs `draft`), to edit and send;
+      without Replying (in a small window, `data-on-x`), or without script, X's own reply window with the words in it. ✕
+      = POST /drafts/:id/discard
+      (post-actions.js in place; without script, back with a toast). A reply sent from the box deletes it (web.js).
+      Context: a message's postView with `draft` (bubble.hbs), or views/draft-line.hbs for a draft arriving live. --}}
+<div class="msg-draft" data-draft-for="{{id}}"><a class="draft-open" href="{{draft.onX}}" target="_blank" rel="noopener" data-reply-to="{{id}}"{{#unless @root.reply}} data-on-x{{/unless}}><span class="draft-by">✎ Draft from {{draft.by}}</span><span class="draft-text" data-draft-text>{{draft.text}}</span></a><form class="draft-discard" method="post" action="/drafts/{{id}}/discard" data-draft-discard><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="back" value="{{@root.currentPath}}"><button type="submit" class="draft-x" aria-label="Discard the draft">✕</button></form></div>

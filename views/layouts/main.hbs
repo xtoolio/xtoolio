@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en" data-theme="{{theme}}" data-font="{{font.key}}" data-accent="{{accent.key}}"{{#if account}} data-account="{{account._id}}"{{/if}}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{!-- "(N)" first, as X's tab says it: THE COUNT, the sidebar's counts added up (routes/pages.js navSums), the same number
+        the account switcher shows beside an account; public/js/live.js keeps it with the counts. --}}
+  <title>{{#if nav.total}}({{count nav.total}}) {{/if}}{{#if pageTitle}}{{pageTitle}} · {{/if}}{{brandName}}</title>
+  {{!-- A page made to be shared (a public circle): the preview X and others draw for its link. Kept out of search:
+        the people in it didn't choose to be on a public page. --}}
+  {{#if meta}}<meta name="description" content="{{meta.description}}">
+  <meta property="og:title" content="{{meta.title}}">
+  <meta property="og:description" content="{{meta.description}}">
+  <meta property="og:image" content="{{meta.image}}">
+  <meta property="og:url" content="{{meta.url}}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="robots" content="noindex">{{/if}}
+  {{#if refresh}}<meta http-equiv="refresh" content="{{refresh}}">{{/if}}
+  {{!-- A page that moves in place by script (the first read's progress) still moves without it. --}}
+  {{#if refreshNoScript}}<noscript><meta http-equiv="refresh" content="{{refreshNoScript}}"></noscript>{{/if}}
+  {{!-- THE MARK in the tab, in the account's accent (lib/mark.js; signed out, the default): a new accent shows on the
+        next page load. The PNGs under it (no SVG favicons; a phone's home screen) stay the default accent. --}}
+  <link rel="icon" href="/mark-{{accent.key}}.svg?v={{assetV}}" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png?v={{assetV}}" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v={{assetV}}">
+  {{!-- THE HOME SCREEN APP (web.js /manifest.webmanifest): opened from a phone's Home Screen, its own window, no
+        browser bars. iOS reads its own meta for that. --}}
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="{{brandName}}">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  {{!-- Not deferred: marks the Home Screen app (<html class="standalone">) before the page paints. --}}
+  <script src="/js/standalone.js?v={{assetV}}"></script>
+  <link rel="preload" href="{{font.href}}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/look.css?v={{assetV}}">
+  <link rel="stylesheet" href="/app.css?v={{assetV}}">
+  {{#if circlePage}}<link rel="stylesheet" href="/circle.css?v={{assetV}}">{{/if}}
+  {{#if tourCases}}<script src="/js/tour.js?v={{assetV}}" defer></script>{{/if}}
+  <script src="/js/swap.js?v={{assetV}}" defer></script>
+  <script src="/js/images.js?v={{assetV}}" defer></script>
+  <script src="/js/gifs.js?v={{assetV}}" defer></script>
+  <script src="/js/search.js?v={{assetV}}" defer></script>
+  <script src="/js/timezone.js?v={{assetV}}" defer></script>
+  <script src="/js/autosubmit.js?v={{assetV}}" defer></script>
+  <script src="/js/toast.js?v={{assetV}}" defer></script>
+  <script src="/js/post-actions.js?v={{assetV}}" defer></script>
+  <script src="/js/copy.js?v={{assetV}}" defer></script>
+  <script src="/js/modal.js?v={{assetV}}" defer></script>
+  <script src="/js/confirm.js?v={{assetV}}" defer></script>
+  <script src="/js/more.js?v={{assetV}}" defer></script>
+  <script src="/js/busy.js?v={{assetV}}" defer></script>
+  <script src="/js/tips.js?v={{assetV}}" defer></script>
+  {{#if account}}<script src="/js/nav.js?v={{assetV}}" defer></script>
+  <script src="/js/live.js?v={{assetV}}" defer></script>
+  <script src="/js/emoji.js?v={{assetV}}" defer></script>
+  <script src="/js/attach.js?v={{assetV}}" defer></script>
+  <script src="/js/feedback.js?v={{assetV}}" defer></script>
+  <script src="/js/usage.js?v={{assetV}}" defer></script>
+  <script src="/js/pick.js?v={{assetV}}" defer></script>
+  <script src="/js/limits.js?v={{assetV}}" defer></script>
+  <script src="/js/dropdown.js?v={{assetV}}" defer></script>
+  <script src="/js/lightbox.js?v={{assetV}}" defer></script>{{/if}}
+</head>
+<body{{#if account}} class="has-side{{#if nav.collapsed}} nav-collapsed{{/if}}"{{/if}}>
+  {{!-- The phone's drawer switch (the sidebar, partials/side-nav.hbs): the header's ☰ and the scrim are its labels, so it
+        opens and closes without script. Before everything it shows (CSS sibling selectors). --}}
+  {{#if account}}<input type="checkbox" id="nav-open" class="nav-open" aria-label="Menu" aria-controls="side">{{/if}}
+  <header class="top">
+    {{#if account}}<label for="nav-open" class="btn ghost icon nav-burger" aria-hidden="true">{{> icon-menu}}<span class="nav-dot" data-nav-dot{{#unless nav.dot}} hidden{{/unless}}></span></label>{{/if}}
+    {{!-- THE MARK beside the name, without the ".com", in the accent: the mark, then the brand
+          name. It REVERSES both "the mark is the favicon only" (of the earlier xo3 mark) and the header saying the
+          domain; the brand-word partial still says the domain in copy. --}}
+    <a class="brand" href="/">{{> site-mark}}{{brandName}}{{#if beta}}<span class="beta-tag">Beta</span>{{/if}}</a>
+    {{#if account}}
+      {{!-- The places (the modules' pages, Usage, Settings) live in the sidebar, not here: the header is
+            you, the balance and the sync button. --}}
+      {{!-- You: THE ACCOUNT SWITCHER's menu (it was a link to your X profile, which the menu now holds). --}}
+      {{> account-menu}}
+      {{!-- Each action is an icon + a label; on a phone the label hides. THE tooltip (data-tip, below: the header is the
+            window's top) only on the icons and on "● Live"; you and the balance say themselves. --}}
+      <nav class="top-actions">
+        {{> limits}}
+        {{#if headerBalance}}<a class="top-balance" href="{{headerBalance.href}}"><span class="btn-label">{{headerBalance.label}}</span> <b data-header-balance>{{dollars headerBalance.usd}}</b></a>{{/if}}
+        {{!-- The sync STATUS and the sync BUTTON, apart ("↻ ● Live" as one button wasn't clear;
+              a reversal of an earlier one button for both). The status, not a
+              button: a green "● Live" while X pushes to this account (`live`, routes/pages.js isLiveFor), else "Synced 4m ago";
+              public/js/live.js flips the two as X's stream comes and goes (.is-live) and sets "Synced just now" after a
+              run. The ↻ alone syncs now (none while paused, out of balance). No tooltip on the status (it said what
+              Live carries; not needed). THE PAUSE lives under it: the status opens THE DROPDOWN (the account menu's
+              panel and items), one press, "Pause syncing" or, paused, "Resume syncing" (POST /pause, routes/pause.js,
+              the same as Settings' Syncing switch; resuming after a day asks "how far back?"). --}}
+        {{#if state.lastRunAt}}
+          <details class="sync-menu" data-dropdown>
+            <summary class="sync-state{{#if live}} is-live{{/if}}" data-live-state aria-label="Syncing"><span class="live-on"><span class="live-dot" aria-hidden="true"></span>Live</span><span class="live-off" data-synced-label>Synced {{ago state.lastRunAt}}</span></summary>
+            <div class="me-panel sync-panel">
+              <form class="me-form" method="post" action="/pause">
+                <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                <input type="hidden" name="back" value="{{currentPath}}">
+                {{#if account.pause.at}}
+                  <input type="hidden" name="pause" value="0">
+                  <button type="submit" class="me-item">{{> icon-play}}<span>Resume syncing<small>Paused {{ago account.pause.at}}.</small></span></button>
+                {{else}}
+                  <input type="hidden" name="pause" value="1">
+                  <button type="submit" class="me-item">{{> icon-pause}}<span>Pause syncing<small>Nothing is read from X until you resume.</small></span></button>
+                {{/if}}
+              </form>
+            </div>
+          </details>
+          {{#unless paused}}
+          <form method="post" action="/sync">
+            <input type="hidden" name="_csrf" value="{{csrfToken}}">
+            <input type="hidden" name="back" value="{{currentPath}}">
+            <button type="submit" class="btn ghost icon sync-btn tip-below tip-end" data-tip="Sync now" aria-label="Sync now">{{> icon-refresh}}</button>
+          </form>
+          {{/unless}}
+        {{/if}}
+      </nav>
+    {{else}}
+      {{!-- Signed out: light ↔ dark (POST /theme, remembered in a cookie, lib/theme.js). It shows where a press
+            takes you: the sun in dark, the moon in light. --}}
+      <nav class="top-actions">
+        {{!-- Bring your own agent (the front page's section, partials/byo-agent.hbs), then sign-in: while sign-up is
+              closed, a quiet "Sign in" for accounts that have one and THE call to action, "Join the waitlist"
+              (partials/get-started.hbs), left out by a page that has its own (`noHeaderGo`: the waitlist page, an
+              invite link's page); open, the one "Sign in with X". All LINKS: /auth/x redirects to x.com, which
+              form-action 'self' would block. --}}
+        <a class="btn ghost icon top-agent tip-below tip-end" href="/#agent" data-tip="Bring your own agent" aria-label="Bring your own agent">{{> icon-agent}}</a>
+        {{#if waitlistOn}}<a class="top-signin" href="/auth/x" data-browser-tz>Sign in</a>{{#unless noHeaderGo}}{{> get-started sm=true}}{{/unless}}{{else}}<a class="signin signin-sm" href="/auth/x" data-browser-tz>Sign in with X</a>{{/if}}
+        <form method="post" action="/theme">
+          <input type="hidden" name="_csrf" value="{{csrfToken}}">
+          <input type="hidden" name="back" value="{{currentPath}}">
+          {{#if (eq theme "light")}}<button type="submit" class="btn ghost icon tip-below tip-end" data-tip="Dark mode" aria-label="Switch to dark mode">{{> icon-moon}}</button>
+          {{else}}<button type="submit" class="btn ghost icon tip-below tip-end" data-tip="Light mode" aria-label="Switch to light mode">{{> icon-sun}}</button>{{/if}}
+        </form>
+        {{!-- The site's own X account (SITE_X), beside the theme: the one that DMs the people let in from the waitlist. --}}
+        {{#if siteX}}<a class="btn ghost icon top-x tip-below tip-end" href="https://x.com/{{siteX}}" target="_blank" rel="noopener" data-tip="@{{siteX}} on X" aria-label="@{{siteX}} on X">{{> icon-x}}</a>{{/if}}
+      </nav>
+    {{/if}}
+    {{!-- THE page-loading bar (public/js/busy.js): a thin accent line along the header's bottom while the next page
+          loads. --}}
+    <div class="nav-progress" data-nav-progress aria-hidden="true"></div>
+  </header>
+  {{!-- Signed in: the sidebar beside the page (the shell); the page, its banners and the footer in the column beside it.
+        The scrim is the drawer's other label: a press outside the drawer closes it (phones). --}}
+  {{#if account}}<div class="shell"><label for="nav-open" class="nav-scrim" aria-hidden="true"></label>{{> side-nav}}<div class="shell-main">{{/if}}
+  {{#if account.needsReauth}}
+    <p class="banner">X stopped letting {{brandName}} read your account, so syncing is paused. <a href="/auth/x">Sign in with X again</a> to resume.</p>
+  {{/if}}
+  {{#if billingNotice}}
+    <p class="banner">{{billingNotice.text}} <a href="/settings#billing">{{billingNotice.link}}</a>.</p>
+  {{/if}}
+  {{!-- THE PAUSE (services/pause.js): held, nothing reads. Resume is the Syncing switch's own press (routes/pause.js),
+        which asks how far back first when it's been more than a day. --}}
+  {{!-- THE AWAY BAR (services/away.js: Keep syncing live off, an hour without xtoolio open): the resume read's two
+        options as the answers, posted straight to /resume; after more than a day, the resume page with its stretches.
+        A choice the balance doesn't cover goes to that page too (its top-up). --}}
+  {{#if away}}
+    <div class="banner away-bar"><span class="away-q">You were away {{away.for}}.</span>
+      {{#if away.long}}<a class="pill" href="/resume">Choose what to catch up</a>
+      {{else}}
+        {{#with away.since}}{{#if affordable}}<form method="post" action="/resume"><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="key" value="since"><button type="submit" class="pill">Catch up{{#if price}} · ≈{{cost price}}{{/if}}</button></form>{{else}}<a class="pill" href="/resume">Catch up</a>{{/if}}{{/with}}
+        {{#with away.skip}}{{#if affordable}}<form method="post" action="/resume"><input type="hidden" name="_csrf" value="{{@root.csrfToken}}"><input type="hidden" name="key" value="now"><button type="submit" class="btn">Skip</button></form>{{else}}<a class="btn" href="/resume">Skip</a>{{/if}}{{/with}}
+      {{/if}}
+    </div>
+  {{else if heldBanner}}
+    <form class="banner" method="post" action="/pause"><input type="hidden" name="_csrf" value="{{csrfToken}}"><input type="hidden" name="pause" value="0"><input type="hidden" name="back" value="{{currentPath}}">{{#if (eq account.pause.why "you")}}Syncing is paused since {{shortDate account.pause.at}}.{{else}}You’re back. Choose how far back to catch up.{{/if}} <button type="submit" class="banner-act">Resume</button>.</form>
+  {{/if}}
+  {{!-- The breadcrumb lives here, not in a page: one row at the same place on every page (a narrow page, like a
+        conversation, would otherwise move it). --}}
+  {{#if crumbs}}<div class="crumbs-row">{{> crumbs crumbs}}</div>{{/if}}
+  <main class="{{#if wide}}wide{{/if}}{{#if crumbs}} under-crumbs{{/if}}{{#if footGo}} front{{/if}}">{{{body}}}</main>
+  {{!-- The same toast, for a script to show (public/js/toast.js xtoolioToast: the ♥ when X says no). --}}
+  {{#if account}}{{> feedback-modal}}{{> lightbox}}{{> media-picker}}{{/if}}
+  {{#if account}}<template id="toast-template">{{> toast text="" kind="error" undo="-"}}</template>{{/if}}
+  {{!-- The footer is the signed-out site's only (on every page it read like an advertisement): signed
+        in, a short form of its links sits at the sidebar's foot (partials/side-nav.hbs). --}}
+  {{!-- Signed out: THE MARK beside the site's links and the credit, at the front page's left edge.
+        `key`: the mark's mask id, the
+        header's being the plain one. --}}
+  {{!-- A BAND of its own (a slightly different ground and a line above it, the window's width, its contents on the
+        page's edges): the site's footer on every signed-out page. On the front page (`footGo`) it opens with the call
+        to action, the page's last word after the code (partials/get-started.hbs, "Pay as you go · Stop anytime"). --}}
+  {{#unless account}}<footer class="foot"><div class="foot-wrap">{{#if footGo}}<div class="signin-row foot-go">{{> get-started}}{{> paygo}}</div>{{/if}}<div class="foot-in">{{> site-mark key="foot"}}<div class="foot-text"><span class="foot-links">{{> site-links}}</span>{{> made-by}}</div></div></div></footer>{{/unless}}
+  {{#if account}}</div></div>{{/if}}
+  {{!-- THE toast, OUTSIDE the shell: .shell-main is a CSS container, which pins anything fixed inside it to itself, so
+        a toast drawn there scrolled with the page and centred in the column. Here it's fixed to the screen. --}}
+  {{#if toast}}{{> toast toast}}{{/if}}
+</body>
+</html>

@@ -1,0 +1,4 @@
+{{!-- A SWITCH IN A PAGE'S TITLE ROW, at its right (routes/pages.js pageSwitch / keepLiveSwitch): what the page can turn
+      off, where people look for it; Settings has every switch too. Its name, an (i) saying what it is, the switch (lands
+      back here). Hash: label, short (a phone's word for it, where the row must stay one line: the Inbox's), hint, toggle. --}}
+<div class="page-switch{{#if short}} has-short{{/if}}"><span class="ps-label">{{label}}</span>{{#if short}}<span class="ps-short" aria-hidden="true">{{short}}</span>{{/if}}{{#if hint}}{{> info-tip tip=hint}}{{/if}}{{> switch toggle}}</div>

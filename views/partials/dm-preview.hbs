@@ -1,0 +1,32 @@
+{{!-- WHAT THE "YOU'RE IN" DM LOOKS LIKE (so the waitlist page shows how the message
+      is delivered): a small drawn direct-message window, the site's account
+      (SITE_X, its mark as the face) writing to you, THE message it sends (`dmText`: services/waitlistDms.js textParts,
+      the address underlined as X draws a link). A picture, not X's own screen: inert, hidden from screen readers, its
+      caption says what it is. The waitlist page draws it only while DMs are on (`dms`): it never shows a message nobody
+      can send. IT ARRIVES: CSS alone, once on load, the way X shows an incoming DM: the window rises in, a
+      typing bubble, then the message pops in and its time fades in; the "Look for this DM" sticker on the window's corner is there from the first paint,
+      bouncing gently for good.
+      Reduced motion: the finished message, still, no typing bubble. --}}
+<figure class="dm-preview">
+  <span class="dm-look" aria-hidden="true">Look for this DM</span>
+  <div class="dm-window" aria-hidden="true" inert>
+    <div class="dm-top">
+      <span class="dm-face">{{> site-mark key="dm"}}</span>
+      <span class="dm-who"><b>{{brandName}}</b>{{#if siteX}}<span>@{{siteX}}</span>{{/if}}</span>
+    </div>
+    <div class="dm-body">
+      <span class="dm-day">Today</span>
+      <div class="dm-msg">
+        <span class="dm-face sm">{{> site-mark key="dm-msg"}}</span>
+        <div class="dm-said">
+          <span class="dm-typing"><i></i><i></i><i></i></span>
+          <p class="dm-bubble">{{dmText.[0]}}<u>{{dmText.[1]}}</u>{{dmText.[2]}}</p>
+        </div>
+      </div>
+      <span class="dm-time">9:41 AM</span>
+    </div>
+    <div class="dm-compose"><span>Start a message</span></div>
+  </div>
+  {{!-- For screen readers only (the window above is hidden from them): the step above already says it on screen. --}}
+  <figcaption class="sr-only">When you’re let in, the message arrives in your X direct messages from {{#if siteX}}@{{siteX}}{{else}}our X account{{/if}}.</figcaption>
+</figure>

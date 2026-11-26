@@ -1,0 +1,35 @@
+{{!-- THE FIRST READ's progress (routes/pages.js pullView), the block that moves: drawn by views/pulling.hbs, and alone by
+      GET /pull/progress when the worker says it moved (public/js/live.js swaps it in; no page reload). ONE page for the
+      whole read, its steps in the order they run (posts and likes on the same page, the likes
+      starting once the posts fill up):
+        your posts and mentions — `stored` of `budget` (People's chosen depth; without one, the Inbox's week: no count
+                                   to show against); full once the next step has begun (`postsDone`)
+        your likes               — when this read reconciles them (`likes` { read, reached, max }): filling toward the
+                                   quote's estimate, full when past the Inbox's start
+        the threads and people   — `rest`: working (a moving bar) once the steps before it are done, until the page
+                                   goes on to the Inbox
+      `line`: still in line behind other first reads: where, and about how long, from how long recent first reads took
+      (no estimate until there are some). `resume`: THE RESUME READ (services/pause.js), the same steps, catching up on
+      what was missed back to the moment chosen. --}}
+{{#if line}}
+<h1>You’re {{#if (eq line.place 1)}}next{{else}}{{ordinal line.place}} in line{{/if}}</h1>
+<p class="note">{{#if line.ahead}}{{count line.ahead}} {{#if (eq line.ahead 1)}}account is{{else}}accounts are{{/if}} being set up ahead of yours. {{/if}}Yours starts as soon as a spot frees up{{#if line.minutes}}, and should be ready in about {{count line.minutes}} {{#if (eq line.minutes 1)}}minute{{else}}minutes{{/if}}{{/if}}. This page updates itself.</p>
+<progress class="pull"></progress>
+{{else}}
+<h1>{{#if resume}}Catching up on what you missed{{else if budget}}Reading your history{{else}}Reading your last week{{/if}}</h1>
+<p class="note">Your Inbox opens when this is done. This page updates itself.</p>
+<div class="pull-step">
+  <p class="pull-label"><span>Your posts and mentions</span><span class="pull-count">{{count stored}}{{#if budget}} of up to {{count budget}}{{/if}}</span></p>
+  {{#if postsDone}}<progress class="pull" value="1" max="1"></progress>{{else if budget}}<progress class="pull" value="{{stored}}" max="{{budget}}"></progress>{{else}}<progress class="pull"></progress>{{/if}}
+</div>
+{{#with likes}}
+<div class="pull-step">
+  <p class="pull-label"><span>Your likes, to find the replies you’ve already liked</span><span class="pull-count">{{#if reached}}{{count read}} read, done{{else if read}}{{count read}} read{{else}}next{{/if}}</span></p>
+  {{#if reached}}<progress class="pull" value="1" max="1"></progress>{{else}}<progress class="pull" value="{{read}}" max="{{max}}"></progress>{{/if}}
+</div>
+{{/with}}
+<div class="pull-step">
+  <p class="pull-label"><span>The threads around your posts and the people in them</span><span class="pull-count">{{#if rest}}working{{else}}next{{/if}}</span></p>
+  {{#if rest}}<progress class="pull"></progress>{{else}}<progress class="pull" value="0" max="1"></progress>{{/if}}
+</div>
+{{/if}}

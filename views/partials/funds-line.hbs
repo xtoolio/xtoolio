@@ -1,0 +1,11 @@
+{{!-- THE MONEY LINE, for an account that pays here (routes/pages.js fundsView): the mark, what paying means, then the
+      balance, or at $0 the next step. "How far back?" (views/history.hbs) opens with it, each option there carrying
+      the top-up that covers it; the start page has its own amounts (views/start.hbs). --}}
+<div class="funds">
+  <p class="funds-line">{{> site-mark key="funds"}}<span><b>{{@root.brandName}}</b> is pay as you go. You only pay for actual usage. {{#if @root.funds.balance}}Balance <b class="funds-num">{{dollars @root.funds.balance}}</b>.{{else}}Add money to get started.{{/if}}</span></p>
+  {{#if @root.funds.payable}}
+    <p class="fine">Prepaid and non-refundable; syncing pauses at $0. See the <a href="/terms">Terms</a>.</p>
+  {{else}}
+    <p class="fine">Payments aren't set up yet.</p>
+  {{/if}}
+</div>

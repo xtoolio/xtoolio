@@ -1,0 +1,77 @@
+{{!-- Privacy Policy. MUST DESCRIBE WHAT THE CODE DOES (policy follows code: change this page, not the
+      code, unless the operator decides the behaviour should change). Sources: lib/x.js SCOPES + services/features.js (what
+      is read), models/* (what is stored), lib/crypto.js (sealed tokens), web.js (cookies, CSP: images from X's CDN),
+      services/billing.js (Stripe), services/live.js (X pushing updates; subscriptions removed once X refuses the
+      token), models/Post.js (the shared store), services/agentTools.js + agentConnections.js (what a connected agent reads and
+      leaves; models/AgentToken.js, AgentGrant.js, Draft.js what's kept), services/deleteAccount.js (Settings → Delete
+      account: what's deleted, and the public X content that stays in the shared store). --}}
+<article class="legal">
+  <h1>Privacy Policy</h1>
+  <p class="fine">Effective November 24, 2026</p>
+
+  <h2 class="section">The short version</h2>
+  <p>{{brandName}} reads your X activity, to show you who you talk to. It writes nothing to X, except likes, reposts, follows and unfollows you press for (one at a time, or a button that says how many) and replies you send yourself (with any photos, GIF or video you attach to them). We keep what it reads so the pages load fast and nothing is paid for twice. We don’t sell it, advertise with it, or train AI on it.{{#if legal.charges}} Payments go through Stripe.{{/if}}</p>
+
+  <h2 class="section">What we collect</h2>
+  <ul>
+    <li><strong>Your X account:</strong> your X id, username, name, profile picture and follower counts, and the access tokens X gives us when you sign in. The tokens are encrypted before they’re stored.</li>
+    <li><strong>What {{brandName}} reads from X</strong> depends on what you turn on. Always: your own profile. With the Inbox or People: your posts and replies, your mentions, the posts those conversations contain (including other people’s), and the public profiles of the people in them, each with whether that person follows you and whether you follow them (X sends that with the profile). With People or Liking: the posts you’ve liked. With Likes: who liked your posts, and who reposted them. With Follows: each time someone follows or unfollows you, with when it happened. With Replies, live, Likes or Follows on, X sends {{brandName}} those new replies, mentions, posts, likes, reposts of your posts and follows of you as they happen, so it stays current between syncs.</li>
+    <li><strong>What you do in {{brandName}}:</strong> your settings (theme, font, time zone, layout, sync choices, what you turned on, whether your circle is public), and, with Liking, Reposting, Following or Replying on, the likes, reposts, follows and replies you send from {{brandName}} (sent to X, and kept like the posts and likes it reads). Photos, GIFs and videos you attach to a reply pass through our server straight to X, which hosts them; we don’t keep a copy. Pictures you pin in your media, save there from someone else’s post, or remove from it, are kept as a reference to the picture on X (and, for a saved one, which post and whose); the picture itself stays on X.</li>
+    <li><strong>Agents you connect</strong> (Settings → Agents): each connection’s name, when it was made and last used, and, for an app you approved, its name and where it sends you back. Of the token or keys an agent uses we keep only a one-way fingerprint, never the key itself. Draft replies an agent leaves are kept until you send or discard them, or for two weeks.</li>
+    <li><strong>Feedback you send</strong> (the sidebar’s Feedback): your words, any screenshots you attach, your account, the page you sent it from and when. Read by the people who run {{brandName}}; deleted when you delete your account.</li>
+    <li><strong>The waitlist:</strong> if you sign in with X before sign-up is open to you, we keep your X id, username, name, profile picture and follower count, and when you joined, and revoke the sign-in at once (nothing is read from your account). If we invite you by your X username before you’ve signed in, we look up your public profile and keep the same details, and any credit the invite comes with until it’s added to your balance. If you sign up through someone’s invite link, we keep whose link it was, and they see your X name and picture among the people who joined through it; deleting your account removes you from their list. If you invite someone and later delete your account, their entry still notes your X id as whose link it was (never your name or anything else about you). “Join the waitlist” asks X only to see who you are; the rest of what {{brandName}} needs is asked for when you’re let in. We let people in one at a time, and while you wait {{#if siteX}}our X account, @{{siteX}}, may{{else}}our X account may{{/if}} look up your public profile again, which tells us whether you follow it. When you’re let in, it may send you one direct message saying so; we keep whether it was sent or X refused it (and X’s reason), never anything you write back. Your waitlist entry stays with your account once you sign up (with who let you in and when you signed up), and goes when you delete your account.</li>
+    <li><strong>Who they tag (Follows):</strong> when you type an @handle there and press Read, we read that public account’s recent posts on X with your sign-in (up to 200, no replies or reposts) and the profiles of the people those posts tag, and keep, for 30 days, who they tag and how often, so you can come back to the list. Their posts themselves aren’t kept.</li>
+    <li><strong>The cost estimate on the front page:</strong> when you type an @handle there, we look that public account up on X (its profile, and how many posts it wrote and was mentioned in each day of the last 30 days) and keep those numbers for a week, so asking again costs nothing. Nothing else about it is stored, and you don’t need to sign in.</li>
+    {{#if legal.charges}}
+    <li><strong>Usage and billing:</strong> a record of each sync and each hour of live updates (what it read and what it cost), your balance and its history, and your Stripe customer id. For auto-refill, the card’s brand and last four digits. Stripe holds the card itself; we never see the full number.</li>
+    {{else}}
+    <li><strong>Usage:</strong> a record of each sync and each hour of live updates (what it read and what it cost X).</li>
+    {{/if}}
+  </ul>
+
+  <h2 class="section">How we use it</h2>
+  <p>Only to run {{brandName}} for you: to build your leaderboard and conversation history, to keep it up to date, and to bill your balance. Posts and public profiles are stored once and shared between {{brandName}} accounts, so a public post that appears in two people’s conversations is kept once. Each person only sees the conversations that involve them, and a post from a private (protected) X account only if X showed that post to them too. Who follows whom is kept the same way, once per pair of accounts, and shown only to the two people in it.</p>
+
+  <h2 class="section">Who we share it with</h2>
+  <ul>
+    <li><strong>X</strong>, which we read your data from (and send your likes, reposts, follows and replies to, with any pictures you attach), under its own terms.</li>
+    {{#if legal.charges}}<li><strong>Stripe</strong>, which processes payments.</li>{{/if}}
+    <li><strong>MongoDB Atlas</strong>, which stores our database, and our hosting provider, which runs {{brandName}}.</li>
+  </ul>
+  <p>Profile pictures and post images load in your browser straight from X’s image server. We don’t share your data with anyone else, except where the law requires it, or where you choose to:</p>
+  <ul>
+    <li><strong>Your circle, if you share it</strong> (People → Your circle, off until you turn it on): a public page at {{siteDomain}}/@your-handle that anyone with the link can see. It shows your name, handle and picture, and the names, handles and pictures of the people closest to you on X, closest first: up to 48, 100 or 250, by the size you pick. Closeness counts the replies you send each other and the likes they give your posts (as {{brandName}} has seen them), so someone who often likes your posts can be in it without replying. Never your posts or theirs, and never the likes themselves. Its preview picture (what X shows when the link is posted) is made on our server from those public profile pictures. The page asks search engines not to list it, and it follows your conversations as they change. Turn it off and the page and its picture are gone.</li>
+    <li><strong>Your own AI agent, if you connect one</strong> (Settings → Agents, off until you connect one): the app you connect (Claude, ChatGPT, or any other) can read what {{brandName}} shows you, your Inbox, conversations, people and posts, under that app’s own terms, and leave draft replies here for you to send. It can’t post, reply, like, repost or follow, or mark anything done. Disconnect it and it stops at once.</li>
+  </ul>
+
+  <h2 class="section">Human access</h2>
+  <p>The person who runs {{brandName}} can see its database and every account’s usage records, and looks at them only to run, bill, fix and protect the service.</p>
+
+  <h2 class="section">Cookies</h2>
+  <p>Two are needed for {{brandName}} to work: one keeps you signed in (for up to {{legal.sessionDays}} days, to up to five X accounts if you add more than one), and one protects forms against forgery. A third remembers light or dark mode for a year, set only when you change it. No analytics, no advertising, no tracking.</p>
+
+  <h2 class="section">How we protect it</h2>
+  <p>Encrypted connections, X tokens encrypted at rest, a database account that can only reach {{brandName}}’s own data, and a strict content policy in your browser.</p>
+
+  <h2 class="section">Your choices</h2>
+  <ul>
+    <li>Turn any part off in Settings: nothing more is read for it.</li>
+    <li>Pause syncing (Settings, or the header’s sync status): nothing is read from X until you resume.</li>
+    <li>Turn off Keep syncing live (the Inbox, or Settings): after an hour without {{brandName}} open, syncing pauses and X stops sending updates; when you come back, you choose whether to catch up.</li>
+    <li>Revoke {{brandName}}’s access in your X settings: it stops reading, and stops taking updates from X within a couple of hours (when X next refuses its access). (Signing out of {{brandName}} doesn’t, by itself.)</li>
+    <li>Delete your account, at once, in Settings → Danger zone. It deletes your account, your settings, your Inbox marks and drafts, the likes, reposts and follows recorded for you, your posts and mentions (unless another {{brandName}} account’s own posts or mentions include them), your usage{{#if legal.charges}} and balance{{/if}} history, {{#if legal.charges}}your agent connections, and your saved card at Stripe{{else}}and your agent connections{{/if}}; it revokes {{brandName}}’s access on X and stops X sending us your updates.{{#if legal.charges}} A prepaid balance isn’t refunded.{{/if}} Public posts and profiles shown in other accounts’ conversations stay in the shared store, as they are on X, and so does whether you follow another {{brandName}} member (it’s theirs too).{{#if legal.charges}} Billing records we must keep by law (Stripe’s receipts and invoices) stay with Stripe.{{/if}}</li>
+    <li>Ask us for a copy of your data: {{> contact}}.</li>
+  </ul>
+
+  <h2 class="section">Retention</h2>
+  <p>We keep your data while your account exists, and delete it when you delete your account.</p>
+
+  <h2 class="section">Children</h2>
+  <p>{{brandName}} isn’t for anyone under 13.</p>
+
+  <h2 class="section">Changes</h2>
+  <p>If this policy changes, we’ll update the effective date and, for material changes, tell you.</p>
+
+  <h2 class="section">Contact</h2>
+  <p>{{legal.entity}}. {{> contact cap=true}}.</p>
+</article>

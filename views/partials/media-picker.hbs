@@ -1,0 +1,13 @@
+{{!-- THE MEDIA PICKER (the reply box's 📎): THE modal (partials/modal.hbs, class "drawer"), drawn once by the layout on
+      signed-in pages, a drawer at the window's right on a computer and the whole screen on a phone, so it never
+      covers the reply being written. public/js/attach.js opens it for the composer that asked and fills its body once
+      with YOUR MEDIA (GET /media/library, views/media-library.hbs); a tile adds it to that reply (a GIF goes alone and
+      closes it), its ☆ pins it, "From your computer" opens the file picker. Done, Esc, the ✕ or the backdrop close it. --}}
+{{#> modal id="media-picker" title="Add photos, a GIF or a video" class="drawer"}}
+<div class="media-head">
+  <span class="media-title">Your media</span>
+  <button type="button" class="btn" data-media-upload>From your computer</button>
+</div>
+<div class="media-body" data-media-body>Loading…</div>
+<form method="dialog" class="drawer-foot"><button class="pill">Done</button></form>
+{{/modal}}

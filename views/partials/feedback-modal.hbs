@@ -1,0 +1,20 @@
+{{!-- FEEDBACK (routes/feedback.js): THE modal, opened by the sidebar's Feedback (data-modal-open="feedback"), drawn once
+      by the layout on every signed-in page. One box, up to 3 screenshots (the 📎, a paste into the box or a drop onto
+      it: public/js/feedback.js, the reply box's preview strip; its rules in data-shots), Send; it comes back to this
+      page with the toast. Who reads it is THE credit's handle (FOOTER_MADE_BY in .env, never in the code: the box says it
+      goes straight to whoever builds it). The box's limit is the route's (`feedbackMax`); the route checks everything
+      again. --}}
+{{#> modal id="feedback" title="Send feedback"}}
+  <form class="feedback-form" method="post" action="/feedback" data-busy data-shots="{{@root.feedbackShots}}">
+    <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+    <input type="hidden" name="page" value="{{@root.currentPath}}">
+    <label class="fine" for="feedback-text">What’s working, what isn’t, what you wish it did. It goes straight to {{#if @root.madeBy}}@{{@root.madeBy.handle}}, who builds {{@root.brandName}}{{else}}the people who build {{@root.brandName}}{{/if}}.</label>
+    <textarea class="field feedback-text" id="feedback-text" name="text" rows="6" maxlength="{{@root.feedbackMax}}" required></textarea>
+    <div class="attach-strip" data-attach-strip hidden></div>
+    <div class="modal-actions">
+      <input type="file" data-shots-input multiple hidden>
+      <button type="button" class="emoji-btn feedback-attach tip-start" data-shots-add aria-label="Add screenshots" data-tip="Add screenshots">📎</button>
+      <button type="submit" class="pill">Send</button>
+    </div>
+  </form>
+{{/modal}}

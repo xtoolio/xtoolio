@@ -1,0 +1,4 @@
+{{!-- THE site's links, written once: the footer's (signed out: the front page, Terms, Privacy) and the sidebar's foot
+      (signed in, under Fold, small and faint, with the credit: partials/side-nav.hbs). The domain, Terms, Privacy, the
+      code. `short` (the sidebar): Terms, Privacy and the code only, no domain. No newline at the end. --}}
+{{#unless short}}<a href="/">{{@root.siteDomain}}</a> · {{/unless}}<a href="/terms">Terms</a> · <a href="/privacy">Privacy</a>{{#if @root.sourceRepoUrl}} · <a href="{{@root.sourceRepoUrl}}" target="_blank" rel="noopener">Code</a>{{/if}}

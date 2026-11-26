@@ -1,0 +1,7 @@
+{{!-- THE ERROR PAGE (web.js, its last two handlers): an address that isn't here (404), or a request that failed (500).
+      Says what happened and where to go; never the error itself. --}}
+<section class="choose connect">
+  <h1>{{#if missing}}Not here{{else}}Something went wrong{{/if}}</h1>
+  <p>{{#if missing}}There's no page at this address.{{else}}That didn't work. Try again in a moment.{{/if}}</p>
+  <p class="connect-answer"><a class="btn" href="/">Home</a></p>
+</section>
