@@ -35,7 +35,7 @@ const { isOwner, syncSettings } = require("../services/accounts");
 const { profilesFor } = require("../services/accountData");
 const { writesLeft, setFollow, setLike } = require("../services/extras");
 const { metered } = require("../services/usage");
-const { FEATURES, MODULES, isOn, granted, active, modulesOn, firstReadGoing } = require("../services/features");
+const { FEATURES, MODULES, isOn, granted, active, modulesOn, stormOnly, firstReadGoing } = require("../services/features");
 const { FOLLOW_ALL_MAX, LIKE_ALL_MAX } = require("../services/conversations");
 const likeLatest = require("../services/likeLatest");
 const { createClient } = require("../lib/x");
@@ -50,6 +50,9 @@ const TOUR_VIEW = { tourCases: TOUR_CASES, canFollow: true, showFollows: true, c
 const CIRCLE_PAGE = "/people/circle";
 // THE LIKESTORM's page (a sidebar place of its own while Liking is active: routes/likestorm.js, answerStorm).
 const STORM_PAGE = "/likestorm";
+// THE START PAGE's own address (GET /start, web.js): home ("/") draws it until the account starts, and a LIKESTORM ONLY
+// account, whose home is the Likestorm page, reaches it here to get the rest.
+const START_PAGE = "/start";
 
 // The money figure in the header, off the request's own account (no lookup): the owner's X API credit (Account.xBalance,
 // saved with every reading), or an account that pays its own balance here. null for anyone else (billing off).
@@ -94,10 +97,14 @@ const withNotice = (back, n, undo = null) => {
 // The money side of a page, for an account that pays (billing on, not the owner); null otherwise.
 // An account that pays here: billing on, and not the owner (who pays X directly). Its Usage page is its statement.
 const paysHere = (account) => billing.enabled && !isOwner(account._id);
+// `amounts`: what this account may top up by (billing.amountsFor), the ONE list its pages offer and /billing/topup
+// accepts. Its first payment is the deposit, smaller for LIKESTORM ONLY (STORM_DEPOSIT_USD: nothing syncs, it pays per
+// storm alone).
 async function fundsView(account) {
   if (!paysHere(account)) return null;
   const paid = await billing.hasPaid(account._id);
-  return { balance: (account.balanceMicros || 0) / 1e6, paid, deposit: config.billing.depositUsd, amounts: billing.amountsFor(paid), payable: config.billing.payable };
+  const deposit = stormOnly(account) ? config.billing.stormDepositUsd : config.billing.depositUsd;
+  return { balance: (account.balanceMicros || 0) / 1e6, paid, deposit, amounts: billing.amountsFor(paid, { depositUsd: deposit, topupAmountsUsd: config.billing.topupAmountsUsd }), payable: config.billing.payable };
 }
 
 // THE BIG READS' CHOICES, priced on the spot for THIS account and its balance: each option (`estimate`: X's cost) with what this account pays for it (X's price plus the markup; `bulk`:
@@ -120,7 +127,8 @@ async function pricedChoices(account, options, { bulk = false } = {}) {
 // read refuses it unaffordable, and /billing/topup accepts its top-up.
 const tagsChoices = (account) => pricedChoices(account, [{ key: "tags", estimate: tagged.quoteUsd() }]);
 
-// "How far back?" for this account (pricedChoices). The stretches (1 day / 1 week / 1 month) are sized from the
+// "How far back?" for this account (pricedChoices). The stretches (1 day / 1 week: a first read goes back a week at
+// most, history.js FIRST_READ_DAYS) are sized from the
 // account's pace, measured as the front page measures a handle (services/estimator.js: kept a week per handle, so this
 // page and its POST agree); unmeasured, post counts.
 // `stored`: only a measurement already kept, never a new one (a resume prices itself on every page load while away).
@@ -183,21 +191,29 @@ const NAV_COUNTS = {
   follows: { field: "followsUnseen", tip: "New follows", sr: "new" },
 };
 function navFor(account, modules, tab) {
-  // Before Get started (the start page: no module on yet), no places at all: four faded "Off"s read as switched off,
-  // the opposite of "everything is on by default", and each led back to the start page anyway. The foot
-  // stays.
-  if (!NAV_ORDER.some((k) => modules[k])) return { items: [], ...navSums([]), collapsed: !!account.navCollapsed };
+  const place = (key, label, href, icon, badge = null) => ({ key, label, href, icon, on: true, current: tab === key, badge });
   const item = (key) => {
     const c = NAV_COUNTS[key];
     return { key, label: NAV_LABELS[key] || MODULE_WORDS[key].label, href: MODULE_PATHS[key], icon: NAV_ICONS[key], on: modules[key], current: tab === key, badge: c && modules[key] ? { n: account[c.field] || 0, tip: c.tip, sr: c.sr } : null };
   };
+  if (!NAV_ORDER.some((k) => modules[k])) {
+    // LIKESTORM ONLY: its page, then the four modules faded, each to the start page (Get started turns them all on
+    // at once), so the rest of the app is one press away.
+    if (stormOnly(account)) {
+      const items = [place("likestorm", "Likestorm", STORM_PAGE, "icon-storm"), ...NAV_ORDER.map((k) => ({ ...item(k), href: START_PAGE }))];
+      return { items, ...navSums(items), collapsed: !!account.navCollapsed };
+    }
+    // Before Get started (the start page: no module on yet), no places at all: four faded "Off"s read as switched off,
+    // the opposite of "everything is on by default", and each led back to the start page anyway. The foot
+    // stays.
+    return { items: [], ...navSums([]), collapsed: !!account.navCollapsed };
+  }
   const items = [...NAV_ORDER.filter((k) => modules[k]), ...NAV_ORDER.filter((k) => !modules[k])].map(item);
   // Places that aren't modules, listed only while there's something to show (no switch of their own to offer):
   // Circle (your closest people around you, the ♥), right under People, whose ranking it draws; Media (the photos,
   // GIFs and videos you've posted) after the modules that are on, whenever your own posts are read (the Inbox or People).
   // Media's count: what you saved since you last opened it (mediaLibrary.unseenOf). Likestorm (like someone's latest
   // posts) right after Media, while Liking is active.
-  const place = (key, label, href, icon, badge = null) => ({ key, label, href, icon, on: true, current: tab === key, badge });
   if (modules.people) items.splice(items.findIndex((i) => i.key === "people") + 1, 0, place("circle", "Circle", CIRCLE_PAGE, "icon-heart"));
   if (modules.inbox || modules.people) items.splice(items.filter((i) => i.on).length, 0, place("media", "Media", mediaLibrary.PAGE, "icon-media", { n: mediaLibrary.unseenOf(account), tip: "Newly saved", sr: "new" }));
   if (active(account, "liking")) items.splice(items.filter((i) => i.on).length, 0, place("likestorm", "Likestorm", STORM_PAGE, "icon-storm"));
@@ -250,7 +266,9 @@ async function startView(req) {
     const o = [...options].reverse().find((c) => c.price <= funds.balance + usd);
     return o ? o.label[0].toLowerCase() + o.label.slice(1) : null;
   };
-  const amounts = paying ? funds.amounts.map((whole) => ({ whole, covers: coverOf(whole) })) : [];
+  // The full app's amounts, its usual deposit first, even for a LIKESTORM ONLY account come for the rest (fundsView
+  // gives that account the smaller deposit, for storms).
+  const amounts = paying ? billing.amountsFor(funds.paid).map((whole) => ({ whole, covers: coverOf(whole) })) : [];
   if (new Set(amounts.map((a) => a.covers)).size < 2) amounts.forEach((a) => (a.covers = null));
   return {
     priced: billing.enabled || isOwner(account._id),
@@ -263,6 +281,11 @@ async function startView(req) {
       steps: paying,
       step,
       amounts,
+      // LIKESTORM ONLY (POST /start/storm): offered until chosen, when X granted the likes it needs; `stormOnly`, chosen
+      // (this page is then reached from its sidebar, for the rest of the app). `stormDeposit`: its smaller first payment.
+      storm: !isOn(account, "likestorm") && granted(account, "likestorm"),
+      stormOnly: stormOnly(account),
+      stormDeposit: paying && !funds.paid ? config.billing.stormDepositUsd : null,
     },
   };
 }
@@ -302,7 +325,8 @@ async function readyOrRender(req, res, tab) {
     return null;
   }
   if (!modulesOn(req.account).length) {
-    res.render("start", await startView(req)); // a reading page (840), like Settings: the picker it was wide for is gone
+    if (stormOnly(req.account)) res.redirect(STORM_PAGE); // LIKESTORM ONLY: home is the Likestorm page
+    else res.render("start", await startView(req)); // a reading page (840), like Settings: the picker it was wide for is gone
     return null;
   }
   if (!isOn(req.account, tab) || !granted(req.account, tab)) {
@@ -463,8 +487,8 @@ async function followMany(account, targets) {
   return { done, n };
 }
 
-// THE BULK LIKE'S LOOP (the Inbox's ♥ Like N: POST /inbox/like-all; someone's latest posts: POST
-// /people/:id/like-latest and the Likestorm's POST /likestorm), inside the caller's own metered unit `meter` (ONE ledger row for the press): each post
+// THE BULK LIKE'S LOOP (the Inbox's ♥ Like N: POST /inbox/like-all; someone's latest posts: the Likestorm's POST
+// /likestorm), inside the caller's own metered unit `meter` (ONE ledger row for the press): each post
 // through THE write (extras.setLike), one after another, stopping at the balance (THE CEILING, past the first like,
 // which the gate let start as a single press would), X's limit, the gate or a stale sign-in, and skipping a post X
 // refuses unless three in a row are (then it isn't the post). `onEach(i)` before each (the stream's progress line).
@@ -501,8 +525,9 @@ async function likeEach(account, ids, meter, { onEach = () => {} } = {}) {
 }
 
 // THE LIKESTORM: like someone's latest posts you haven't liked, as many as X's like window allows now (at most
-// LIKE_ALL_MAX). Two doors, one press, by their X id: the Likestorm page's second step (POST /likestorm: the person its
-// first step found and you confirmed, routes/likestorm.js) and a person's page (POST /people/:id/like-latest).
+// LIKE_ALL_MAX), by their X id: the Likestorm page's second step (POST /likestorm: the person its first step found and
+// you confirmed, routes/likestorm.js). The ONE door: a person's page had "Like latest N" too, unpriced, and it was
+// removed (the Likestorm page shows the price on the press).
 // services/likeLatest.js reads their own latest posts, then THE bulk like's loop (likeEach) likes them; ONE ledger unit
 // for all of it, kind "like" (X's day counts them), gated and charged at a press's price, never past its quote or the
 // balance. STREAMED when asked (Accept: application/x-ndjson, as /inbox/like-all: { total } once read, { left } per
@@ -510,8 +535,8 @@ async function likeEach(account, ids, meter, { onEach = () => {} } = {}) {
 // button (public/js/post-actions.js likeLatest), and on the Likestorm page THE CELEBRATION: their card counts the likes
 // and bursts with confetti when X is done. Without script, back to `back` with the toast. Never retried. The form's
 // `n` (the Likestorm page's slider) asks for fewer than X allows; never more.
-// THE SIZE OF A STORM: every like X's window has left, at most LIKE_ALL_MAX. The one rule for the slider, the press,
-// the person page's button and the answer's `room`. Spending the whole window is fine: the header's stopwatch turns
+// THE SIZE OF A STORM: every like X's window has left, at most LIKE_ALL_MAX. The one rule for the slider, the press and
+// the answer's `room`. Spending the whole window is fine: the header's stopwatch turns
 // red quietly (public/js/limits.js; it only shakes and opens when X REFUSES one). (A storm once kept one like back to
 // dodge the stopwatch's alarm at zero; the alarm was the bug.) → how many a storm may like now
 const stormRoom = (left) => Math.max(0, Math.min(left, LIKE_ALL_MAX));
@@ -606,6 +631,7 @@ const keepLiveSwitch = (account, back) => {
 module.exports = {
   CIRCLE_PAGE,
   STORM_PAGE,
+  START_PAGE,
   headerBalance,
   isLiveFor,
   requireAccount,

@@ -65,6 +65,7 @@ const AccountSchema = new mongoose.Schema(
       people: { type: FeatureSchema, default: () => ({}) },
       likes: { type: FeatureSchema, default: () => ({}) },
       follows: { type: FeatureSchema, default: () => ({}) },
+      likestorm: { type: FeatureSchema, default: () => ({}) }, // LIKESTORM ONLY (services/features.js): beside the modules
     },
     // Light / dark / follow the system (lib/theme.js, the one list; light by default). Rendered server-side on
     // <html data-theme>, so there's no flash.

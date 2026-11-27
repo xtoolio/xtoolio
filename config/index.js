@@ -158,6 +158,8 @@ const config = {
     // Whole dollars. An account's first top-up is at least the deposit; after that, any of the top-up amounts. The
     // top-up link only ever mints a Checkout for an amount from these, never a number from the browser.
     depositUsd: Number(optEnv("DEPOSIT_USD", "20")),
+    // LIKESTORM ONLY's first top-up (services/features.js): smaller, since nothing syncs and it pays per storm alone.
+    stormDepositUsd: Number(optEnv("STORM_DEPOSIT_USD", "10")),
     // THE INVITE CREDIT: what an admin's Invite (Admin → Waitlist, by @handle) puts on the person's balance when they
     // first sign in (services/waitlist.js). 0: none.
     inviteCreditUsd: Number(optEnv("INVITE_CREDIT_USD", "0")),
@@ -206,6 +208,7 @@ if (!(config.billing.markupAfterCapPct >= 0 && config.billing.markupAfterCapPct 
 if (!Number.isFinite(config.billing.floorCents)) throw new Error("METERED_FLOOR_CENTS must be a number");
 if (!(Number.isInteger(config.sync.slots) && config.sync.slots >= 1 && config.sync.slots <= 100)) throw new Error("SYNC_SLOTS must be a whole number from 1 to 100");
 if (!config.billing.topupAmountsUsd.length || !(config.billing.depositUsd > 0)) throw new Error("TOPUP_AMOUNTS_USD needs whole dollar amounts and DEPOSIT_USD a positive one");
+if (!(Number.isInteger(config.billing.stormDepositUsd) && config.billing.stormDepositUsd > 0)) throw new Error("STORM_DEPOSIT_USD needs a positive whole dollar amount");
 if (!config.billing.topupAmountsUsd.includes(config.billing.autoRefillUsd)) throw new Error("AUTO_REFILL_USD must be one of TOPUP_AMOUNTS_USD");
 if (!(config.billing.inviteCreditUsd >= 0 && config.billing.inviteCreditUsd <= 500 && Math.round(config.billing.inviteCreditUsd * 100) === config.billing.inviteCreditUsd * 100)) throw new Error("INVITE_CREDIT_USD must be dollars and cents, 0 to 500");
 

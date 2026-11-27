@@ -543,6 +543,9 @@
   // tag in the same [data-person-row] is redrawn by partials/follow-badge.hbs's own rules: Mutual / Follows you /
   // You follow / "—" (a facts column, data-ftag-dash), hidden when there's nothing to say. A person drawn more than once
   // on the page (a conversation's names, partials/follow-inline.hbs) has a Follow button each: every one of theirs moves.
+  // A button pressed on this page is marked `.pressed`: on a phone a conversation's name line shows the button only
+  // while it's a "Follow back" (app.css), so the press would make it vanish; pressed, it stays and shows where you
+  // stand now (⇄ Mutual, or Follow back again), until the page is drawn again.
   function showFollow(form, following, followsYou) {
     var action = form.getAttribute("action");
     document.querySelectorAll("form[data-follow]").forEach(function (f) {
@@ -551,6 +554,7 @@
   }
   function showFollowOne(form, following, followsYou) {
     var btn = form.querySelector(".follow-btn");
+    btn.classList.add("pressed");
     btn.classList.toggle("on", following);
     btn.setAttribute("aria-pressed", following ? "true" : "false");
     form.elements.on.value = following ? "0" : "1";
@@ -1491,12 +1495,12 @@
       });
   }
 
-  // ── LIKE THEIR LATEST POSTS (views/partials/like-latest.hbs → POST /people/:id/like-latest) ──
+  // ── THE LIKESTORM (views/likestorm.hbs, its second step → POST /likestorm) ──
   // None of the posts it likes are on the page, so there's nothing to flip: the BUTTON says the progress, its heart
   // filled while X takes them (.counting, as a bulk ♥): "Reading their posts…", then "Liking · 12 to go" off the
-  // stream's lines, then the toast with how many X took, and the button as X's window now leaves it ("Like latest 2",
-  // or a disabled "More at 3:42 PM"). No answer at all: the page reloads to show what went through. Never retried.
-  // THE LIKESTORM's page (views/likestorm.hbs, its second step) adds a SLIDER (how many: `n`) whose every move re-prices
+  // stream's lines, then the toast with how many X took. No answer at all: the page reloads to show what went through.
+  // Never retried. (A person's page had the same press, "Like latest N", unpriced: removed; this page prices it.)
+  // A SLIDER (how many: `n`) whose every move re-prices
   // the button from the server's own estimates (`data-prices`, one per n), and THE CELEBRATION on their card (drawn by
   // the server, the confirmation: `[data-storm-who]`): its status line counts the likes as they land, then it goes
   // green and bursts with confetti when X is done.
@@ -1600,8 +1604,7 @@
             if (cap) cap.textContent = (form.getAttribute("data-left-text") || "").replace("{left}", String(Math.min(l.left, max)));
             stormLabel(form);
           }
-        } else if (!l.left) label.textContent = "More " + (l.at || "later");
-        else label.textContent = "Like latest " + Math.min(l.left, max);
+        }
       })
       .catch(function () { reloadWith("likes-lost"); });
   }

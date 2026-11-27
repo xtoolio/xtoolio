@@ -34,7 +34,7 @@ const billing = require("../services/billing");
 const { pnlFor } = require("../services/pnl");
 const { activityFor, WINDOWS, windowOf } = require("../services/activity");
 const pause = require("../services/pause");
-const { modulesOn } = require("../services/features");
+const { modulesOn, stormOnly } = require("../services/features");
 const { isAdmin, accessToken, NeedsReauth } = require("../services/accounts");
 const { handleOf } = require("../lib/handle");
 const { withNotice } = require("./pages");
@@ -91,6 +91,7 @@ function statusOf(account) {
   const broke = billing.paused(account);
   if (broke) return { label: "Out of money", tone: "off" };
   if (pause.held(account, broke)) return { label: account.pause.why === "away" ? "Away" : "Paused", tone: "wait" };
+  if (stormOnly(account)) return { label: "Likestorm only", tone: "" }; // nothing syncs: it pays per storm
   if (!modulesOn(account).length) return { label: "Not started", tone: "" };
   return { label: "Syncing", tone: "on" };
 }

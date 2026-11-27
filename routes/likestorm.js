@@ -3,7 +3,7 @@
 //      (services/likeLatest.js findPerson: one profile read, "Find @them"), stores their profile, and lands on
 //      /likestorm?who=<their X id>, which SHOWS THEM (face, name, @handle, followers, bio): the confirmation.
 //   2. LIKE: under their card, the slider and "♥ Like N · ≈ $X" (routes/pages.js stormChoices), POST /likestorm with
-//      their id → routes/pages.js answerStorm, the same press as "♥ Like latest N" on a person's page.
+//      their id → routes/pages.js answerStorm.
 // The card is drawn by the server; post-actions.js likeLatest counts the likes on it and bursts the confetti.
 // Mounted by web.js.
 "use strict";
@@ -14,6 +14,7 @@ const Person = require("../models/Person");
 const { noticeFor } = require("../lib/notices");
 const { handleOf } = require("../lib/handle");
 const { active } = require("../services/features");
+const billing = require("../services/billing");
 const { syncSettings } = require("../services/accounts");
 const { findPerson } = require("../services/likeLatest");
 const { bioSegments } = require("../services/text");
@@ -29,13 +30,18 @@ module.exports = function likestormRoutes() {
     const who = /^\d+$/.test(String(req.query.who || "")) && String(req.query.who) !== req.account._id ? String(req.query.who) : null;
     const profile = who && (await Person.findById(who, "username name image bio bioUrls followers protected gone").lean());
     const storm = profile ? await stormChoices(req.account, res.locals.timeZone) : null;
+    // NO MONEY, NO STORM: an account that pays here and is out of runway (THE GATE, billing.paused) is asked for money
+    // first, as the start page asks (amount tiles, links to Checkout back here): finding someone is a paid read the
+    // gate would refuse. A LIKESTORM ONLY account lands here with $0, and its first top-up is the smaller one.
+    const funds = await fundsView(req.account);
     res.render("likestorm", {
+      needsMoney: !!funds && billing.paused(req.account),
       state: await SyncState.findById(req.account._id, "lastRunAt").lean(), // the header's "● Live" / "Synced …", as on every page
       handle: profile ? profile.username : "",
       person: profile && { id: who, username: profile.username, profile },
       bio: profile && bioSegments(profile),
       storm: storm && { ...storm, start: storm.upTo, price: storm.prices[storm.upTo - 1] || "" },
-      funds: profile && (await fundsView(req.account)),
+      funds,
     });
   });
 

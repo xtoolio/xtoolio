@@ -14,7 +14,6 @@
       {{#with person.profile.website}}{{#with (webHref url)}}<span class="sub-part"><a href="{{this}}" target="_blank" rel="noopener nofollow">{{../display}}</a></span>{{/with}}{{/with}}
       {{#if canFollow}}{{#with person}}{{> follow-button id=id}}{{/with}}{{/if}}
       {{#if showFollows}}{{#unless canFollow}} {{#with person}}{{> follow-badge}}{{/with}}{{/unless}}{{/if}}
-      {{#with person}}{{> like-latest id=id}}{{/with}}
     </div>
     {{#if person.profile.gone}}<p class="sub">X isn't serving this account right now (suspended or deleted).</p>{{/if}}
     {{#if bio.length}}<p class="bio">{{> segments segments=bio}}</p>{{/if}}

@@ -681,8 +681,9 @@ const rawGet = (port, pathname, headers) =>
     assert.ok(/doesn’t charge for its use/.test(termsHtml) && !/prepaid balance\b.*There’s no subscription/.test(termsHtml) && !/Stripe/.test(termsHtml) && !/Stripe/.test(privacyHtml), "billing off: the Terms say it doesn't charge, and neither page names Stripe");
     // Where the site charges, the same template states the billing rules with config's own numbers.
     {
-      const legalOn = { charges: true, entity: "Example Inc.", depositUsd: cfg.billing.depositUsd, refillThresholdUsd: (cfg.billing.autoRefillThresholdCents / 100).toFixed(0), markupPct: 50, markupCapUsd: 50, markupAfterPct: 15, bulkPct: 15 };
+      const legalOn = { charges: true, entity: "Example Inc.", depositUsd: cfg.billing.depositUsd, stormDepositUsd: cfg.billing.stormDepositUsd, refillThresholdUsd: (cfg.billing.autoRefillThresholdCents / 100).toFixed(0), markupPct: 50, markupCapUsd: 50, markupAfterPct: 15, bulkPct: 15 };
       const on = await require("express-handlebars").create(require("../lib/hbs")).render(path.join(root, "views", "terms.hbs"), { brandName: "Example", legal: legalOn });
+      assert.ok(on.includes(`as little as $${cfg.billing.stormDepositUsd}`), "billing on: the Terms state Likestorm only's smaller first payment, from config");
       assert.ok(on.includes(`at least $${cfg.billing.depositUsd} before its first sync`) && on.includes(`$${cfg.billing.autoRefillThresholdCents / 100} or below`) && /non-refundable/.test(on) && /syncing pauses/.test(on) && /Stripe/.test(on), "billing on: the Terms state the deposit, the refill line, non-refundable, the pause and Stripe, from config");
     }
     const topup = await fetch(`${base}/billing/topup?amount=25`, { redirect: "manual" });

@@ -38,15 +38,26 @@ const X_MENTION_LIMIT = 800;
 
 // Stretches of time (1 day, 1 week, 1 month of posts), sized from the
 // account's pace (`perDay`: its posts + the replies and mentions to it a day, services/estimator.js). Without a pace,
-// counts (they were 300 / 1,000, then 1,000 / 2,500).
+// counts.
 const DAY_TIERS = [
   { key: "day", days: 1, label: "1 day" },
   { key: "week", days: 7, label: "1 week" },
   { key: "month", days: 30, label: "1 month" },
 ];
+// THE FIRST READ goes back A WEEK AT MOST (the start page, "how far back?", the front page's onboarding row): a month
+// was offered, and on an account that likes far more than the measured 1.13 a post (lib/pricing.js), reconciling a
+// month of its likes read several times what was quoted and took the whole first balance. Reading further back stays
+// a later, separate choice (services/further.js passes `maxDays: Infinity`).
+const FIRST_READ_DAYS = 7;
 const COUNT_TIERS = [
   { key: "1000", budget: 1000, label: "1,000 posts", detail: "Up to 1,000 posts and mentions" },
   { key: "2500", budget: 2500, label: "2,500 posts", detail: "Up to 2,500 posts and mentions" },
+];
+// Without a pace a week can't be sized, so the first read offers small counts, and "everything X serves" only when
+// one of them already reaches it.
+const FIRST_COUNT_TIERS = [
+  { key: "300", budget: 300, label: "300 posts", detail: "Up to 300 posts and mentions" },
+  { key: "1000", budget: 1000, label: "1,000 posts", detail: "Up to 1,000 posts and mentions" },
 ];
 
 // The options for someone with `postCount` posts (X's tweet_count; unknown → assume the most) and, when known, a pace
@@ -56,8 +67,9 @@ const COUNT_TIERS = [
 // likes it reconciles over the same stretch (firstReadLikes, `likeCount` the account's own when known), in its price and
 // said in its detail. THE DETAIL IS WHAT YOU'RE BUYING, in one line and nothing else (the start page:
 // people don't read long text, so each option says plainly what it buys): the
-// budget is a hard depth, so "up to"; the likes an estimate, so "about".
-function historyOptions(postCount, { owned = false, perDay = null, likeCount = null } = {}) {
+// budget is a hard depth, so "up to"; the likes an estimate, so "about". `maxDays`: the longest stretch offered
+// (FIRST_READ_DAYS unless the caller reads further back).
+function historyOptions(postCount, { owned = false, perDay = null, likeCount = null, maxDays = FIRST_READ_DAYS } = {}) {
   const posts = Number.isFinite(postCount) ? postCount : X_POST_LIMIT;
   const servedPosts = Math.min(X_POST_LIMIT, posts);
   const all = servedPosts + X_MENTION_LIMIT;
@@ -67,7 +79,7 @@ function historyOptions(postCount, { owned = false, perDay = null, likeCount = n
   const allDetail = posts > X_POST_LIMIT ? `Your latest ${n(servedPosts)} posts (X's limit) and up to ${n(X_MENTION_LIMIT)} mentions` : `Your ${n(servedPosts)} posts and up to ${n(X_MENTION_LIMIT)} mentions`;
   const options = [];
   if (perDay > 0) {
-    for (const t of DAY_TIERS) {
+    for (const t of DAY_TIERS.filter((d) => d.days <= maxDays)) {
       const budget = Math.max(5, Math.round(t.days * perDay));
       if (budget >= all) {
         // This stretch reaches past what X serves: it IS everything.
@@ -76,9 +88,12 @@ function historyOptions(postCount, { owned = false, perDay = null, likeCount = n
       }
       options.push({ key: t.key, budget, label: t.label, detail: `Up to ${n(budget)} posts and mentions` });
     }
-  } else {
+  } else if (maxDays === Infinity) {
     options.push(...COUNT_TIERS.filter((t) => t.budget < all));
     options.push({ key: "all", budget: all, label: "Everything X serves", detail: allDetail });
+  } else {
+    options.push(...FIRST_COUNT_TIERS.filter((t) => t.budget < all));
+    if (FIRST_COUNT_TIERS.some((t) => t.budget >= all)) options.push({ key: "all", budget: all, label: "Everything X serves", detail: allDetail });
   }
   return options.map((o) => {
     const likes = firstReadLikes({ budget: o.budget, likeCount });
@@ -86,4 +101,4 @@ function historyOptions(postCount, { owned = false, perDay = null, likeCount = n
   });
 }
 
-module.exports = { historyOptions, firstReadLikes, pullCost, DAY_TIERS, X_POST_LIMIT, X_MENTION_LIMIT, LIKES_PAGE };
+module.exports = { historyOptions, firstReadLikes, pullCost, DAY_TIERS, FIRST_READ_DAYS, X_POST_LIMIT, X_MENTION_LIMIT, LIKES_PAGE };

@@ -8,13 +8,25 @@
          confetti. Spent: no slider or button, "You've used X's 50 likes for now. More at 3:42 PM."; nothing the
          balance covers: a disabled button and an "Add $X" link. Without script,
          plain POSTs and the toast. The handle box is the front page's (.estimate-handle).
-      Context: handle, person, bio, storm { left, at, max, upTo, prices, start, price }, funds. --}}
+      OUT OF MONEY (`needsMoney`: THE GATE would refuse the Find): the start page's amount tiles first, each a top-up
+      LINK back here, and no Find box; a LIKESTORM ONLY account's first one is the smaller deposit (fundsView).
+      Context: handle, person, bio, storm { left, at, max, upTo, prices, start, price }, funds, needsMoney. --}}
 <header class="page-head">
   <h1>Likestorm</h1>
 </header>
 
 <section class="panel bulk-read storm">
   <p class="bulk-read-line">Like someone’s latest posts, as many as X allows right now.</p>
+  {{#if needsMoney}}
+  {{#if funds.payable}}
+  <div class="amounts storm-amounts">
+    {{#each funds.amounts}}<a class="amount" href="/billing/topup?amount={{this}}&amp;back=/likestorm"><b>${{this}}</b></a>{{/each}}
+  </div>
+  <p class="fine">Add money to start. Each storm shows its price before you press. Prepaid and non-refundable. <a href="/terms">Terms</a></p>
+  {{else}}
+  <p class="fine">Payments aren’t set up yet.</p>
+  {{/if}}
+  {{else}}
   <form class="estimate-handle storm-find" method="post" action="/likestorm/find" data-busy>
     <input type="hidden" name="_csrf" value="{{csrfToken}}">
     <div class="handle-box"><input type="text" name="handle" value="{{#if handle}}@{{handle}}{{/if}}" placeholder="@handle" aria-label="Their X handle" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="64" required{{#unless person}} autofocus{{/unless}}></div>
@@ -51,5 +63,6 @@
       {{#if funds.payable}} <a class="storm-cap" href="/billing/topup?amount={{lookup funds.amounts 0}}&amp;back=/likestorm">Add ${{lookup funds.amounts 0}}</a>{{/if}}
     {{/if}}
   </form>
+  {{/if}}
   {{/if}}
 </section>

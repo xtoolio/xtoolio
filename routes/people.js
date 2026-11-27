@@ -23,8 +23,8 @@ const SyncState = require("../models/SyncState");
 const { syncSettings } = require("../services/accounts");
 const { isOn, active } = require("../services/features");
 const { setFollow } = require("../services/extras");
-const { LIKE_ALL_MAX, likeFacts, knowsFollows, savedMediaOf, conversationCard, boardFor, circleFor, loadPerson } = require("../services/conversations");
-const { CIRCLE_PAGE, requireAccount, safeBack, withNotice, readyOrRender, conversationPage, wantsJson, balanceText, refusedJson, xFailure, furtherChoices, FURTHER_STATE, fundsView, answerStorm, stormRoom, likeAllowance, pageSwitch } = require("./pages");
+const { likeFacts, knowsFollows, savedMediaOf, conversationCard, boardFor, circleFor, loadPerson } = require("../services/conversations");
+const { CIRCLE_PAGE, requireAccount, safeBack, withNotice, readyOrRender, conversationPage, wantsJson, balanceText, refusedJson, xFailure, furtherChoices, FURTHER_STATE, fundsView, pageSwitch } = require("./pages");
 
 module.exports = function peopleRoutes() {
   const router = express.Router();
@@ -229,10 +229,7 @@ module.exports = function peopleRoutes() {
     if (!(await readyOrRender(req, res, "people"))) return;
     const { state, person, threads, showFollows } = await loadPerson(req.account._id, String(req.params.id));
     if (!person) return res.status(404).render("leaderboard", { state, rows: [], notFound: true });
-    // "♥ Like latest N" (partials/like-latest.hbs): X's like window now, with Liking active.
-    const allow = active(req.account, "liking") ? await likeAllowance(req.account, res.locals.timeZone) : null;
     res.render("person", {
-      likeLatest: allow && { left: stormRoom(allow.left), at: allow.at, max: LIKE_ALL_MAX },
       crumbs: [HOME_CRUMB, { label: people.displayNameOf(person), person }],
       bio: bioSegments(person.profile),
       wide: true,
@@ -289,16 +286,6 @@ module.exports = function peopleRoutes() {
       const why = xFailure(err, `[follow] ${on ? "following" : "unfollowing"} ${personId} for @${req.account.username}`);
       return json ? refusedJson(res, why, err) : res.redirect(303, withNotice(back, why));
     }
-  });
-
-  // THE LIKESTORM from their page ("♥ Like latest N" beside their name, views/person.hbs): routes/pages.js answerStorm,
-  // by their id (someone stored, never yourself).
-  router.post("/people/:id/like-latest", requireAccount, async (req, res) => {
-    const personId = String(req.params.id);
-    const back = `/people/${encodeURIComponent(personId)}`;
-    const known = /^\d+$/.test(personId) && personId !== req.account._id && (await Person.exists({ _id: personId }));
-    if (!known || !active(req.account, "liking")) return wantsJson(req) || (req.get("accept") || "").includes("ndjson") ? res.status(400).json({ ok: false, ...noticeFor("x-failed") }) : res.redirect(303, back);
-    return answerStorm(req, res, personId, back);
   });
 
   // Re-read one person's profile from X now (the ↻ on a People or Follows card, or beside the name on their page). Only

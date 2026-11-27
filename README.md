@@ -20,9 +20,11 @@ one), **and it's not a supported product:** running your own is up to you, and i
 
 - **Sign in with X** (OAuth 2.0 with PKCE). It asks X to read, and for the writes its buttons make (like, repost,
   reply with pictures, follow); it writes only when you press one. It never reads DMs.
-- **Four parts, each on its own:** the Inbox, People, Likes and Follows, priced separately, in any combination.
-- **A first read** (your history, as far back as you choose, up to X's latest 3,200 posts and 800 mentions, priced
-  before it runs; the Inbox opens on your newest 20 replies), then a **sync every 15 minutes**, and **Live**: X's
+- **Four parts, each on its own:** the Inbox, People, Likes and Follows, priced separately, in any combination. Or
+  **Likestorm only**: like someone's latest posts in one press, with nothing synced in between, paid per storm.
+- **A first read** (a day or a week of your history, priced before it runs; Your circle can read further back later,
+  up to X's latest 3,200 posts and 800 mentions; the Inbox opens on your newest 20 replies), then a **sync every 15
+  minutes**, and **Live**: X's
   activity stream pushes replies to your posts, likes and
   follows of you within seconds (not every one: X skips some likes, and never sends a reply further down your thread, so
   while the app is open your mentions are also read every 30 seconds). Live needs an always-on machine: what X pushed

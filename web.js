@@ -56,7 +56,7 @@ const following = require("./services/following");
 const estimator = require("./services/estimator");
 const { handleOf } = require("./lib/handle");
 const invites = require("./services/invites");
-const { FEATURES, MODULES, isOn, granted, active, modulesOn, pullDue, firstReadGoing, turnOn } = require("./services/features");
+const { FEATURES, MODULES, isOn, granted, active, modulesOn, stormOnly, pullDue, firstReadGoing, turnOn } = require("./services/features");
 const { likersByPost, setLike, setRepost, writesLeft, setFollow, sendReply, REPLY_MAX } = require("./services/extras");
 const Follow = require("./models/Follow");
 const billing = require("./services/billing");
@@ -78,7 +78,7 @@ const likestormRoutes = require("./routes/likestorm");
 const tagged = require("./services/tagged");
 const agentOAuth = require("./services/agentOAuth");
 const { connectionsFor } = require("./services/agentConnections");
-const { CIRCLE_PAGE, STORM_PAGE, headerBalance, isLiveFor, requireAccount, safeBack, withNotice, paysHere, fundsView, pricedChoices, tagsChoices, historyChoices, furtherChoices, FURTHER_STATE, resumeChoices, pageSwitch, keepLiveSwitch, pullView, navFor, navSums, modulesOf, countOf, readyOrRender, PULL_STATE, likeAllowance, conversationPage, xFailure, bulkLabel, namesOf, wantsJson, backTo, balanceText, refusedJson } = require("./routes/pages");
+const { CIRCLE_PAGE, STORM_PAGE, START_PAGE, startView, headerBalance, isLiveFor, requireAccount, safeBack, withNotice, paysHere, fundsView, pricedChoices, tagsChoices, historyChoices, furtherChoices, FURTHER_STATE, resumeChoices, pageSwitch, keepLiveSwitch, pullView, navFor, navSums, modulesOf, countOf, readyOrRender, PULL_STATE, likeAllowance, conversationPage, xFailure, bulkLabel, namesOf, wantsJson, backTo, balanceText, refusedJson } = require("./routes/pages");
 
 function createApp({ sessionStore }) {
   const app = express();
@@ -407,6 +407,7 @@ function createApp({ sessionStore }) {
     jurisdiction: config.legalJurisdiction,
     contactX: config.contactX,
     depositUsd: config.billing.depositUsd,
+    stormDepositUsd: config.billing.stormDepositUsd, // LIKESTORM ONLY's first payment
     refillThresholdUsd: (config.billing.autoRefillThresholdCents / 100).toFixed(0),
     refillLimitUsd: autoRefill.DEFAULT_LIMIT, // THE MONTHLY LIMIT's default (services/autoRefill.js)
     sessionDays: config.sessionDays,
@@ -1113,18 +1114,35 @@ function createApp({ sessionStore }) {
   // page links to X otherwise), a paying account with money in, and an option from this account's own list that its
   // balance covers (the budget is recomputed here, never taken from the form). The worker starts the first read within
   // seconds (features.pullDue).
+  // THE START PAGE at its own address (routes/pages.js START_PAGE): home draws it too, but a LIKESTORM ONLY account's
+  // home is the Likestorm page, and this is where its sidebar's faded modules lead. Started: home.
+  app.get(START_PAGE, requireAccount, async (req, res) => {
+    if (modulesOn(req.account).length) return res.redirect(303, "/");
+    res.render("start", await startView(req));
+  });
+
   app.post("/start", requireAccount, async (req, res) => {
     if (modulesOn(req.account).length) return res.redirect(303, "/");
-    if (MODULES.some((k) => !granted(req.account, k))) return res.redirect(303, "/");
-    if (billing.paused(req.account)) return res.redirect(303, withNotice("/", "out-of-balance"));
+    if (MODULES.some((k) => !granted(req.account, k))) return res.redirect(303, START_PAGE);
+    if (billing.paused(req.account)) return res.redirect(303, withNotice(START_PAGE, "out-of-balance"));
     const choice = (await historyChoices(req.account)).find((o) => o.key === req.body.key);
-    if (!choice || !choice.affordable) return res.redirect(303, withNotice("/", "bulk-short"));
+    if (!choice || !choice.affordable) return res.redirect(303, withNotice(START_PAGE, "bulk-short"));
     const update = turnOn(MODULES);
     update.$set.history = { budget: choice.budget, chosenAt: new Date() };
     update.$set.inboxFrom = { want: inboxStart.FIRST_REPLIES }; // the Inbox opens with the newest 20 (services/inboxStart.js)
     await reconcileLikes(req.account._id); // before the modules: the worker may start the read the moment they're on
     await Account.updateOne({ _id: req.account._id }, update);
     res.redirect(303, "/");
+  });
+
+  // LIKESTORMS ONLY (the start page's way out, services/features.js FEATURES.likestorm): just the likestorm switch, no
+  // module, no history read, nothing that syncs; money is asked for on the Likestorm page itself (its first top-up the
+  // smaller STORM_DEPOSIT_USD), which is home from now on. Only before anything is on, with X's likes granted.
+  app.post("/start/storm", requireAccount, async (req, res) => {
+    if (modulesOn(req.account).length || stormOnly(req.account)) return res.redirect(303, "/");
+    if (!granted(req.account, "likestorm")) return res.redirect(303, START_PAGE);
+    await Account.updateOne({ _id: req.account._id }, turnOn("likestorm"));
+    res.redirect(303, withNotice(STORM_PAGE, "storm-ready"));
   });
 
   // Theme (lib/theme.js). Signed in: the menu's Theme item cycles light → dark → auto on the account. Signed out: the
@@ -1393,8 +1411,8 @@ function createApp({ sessionStore }) {
     if (!MODULES.includes(key)) return res.redirect(303, back);
     // Before Get started, the start page turns them ALL on, with the history and the Inbox's start (POST /start);
     // Settings draws them on and locked meanwhile (estimateView accountEstimate `beforeStart`). One turned on here would
-    // skip the start page.
-    if (!modulesOn(req.account).length) return res.redirect(303, "/");
+    // skip the start page (a LIKESTORM ONLY account's too: it has no home there).
+    if (!modulesOn(req.account).length) return res.redirect(303, START_PAGE);
     if (req.body.on === "1") {
       if (!isOn(req.account, key)) await Account.updateOne({ _id: req.account._id }, turnOn(key));
       return res.redirect(303, key === "people" && !(req.account.history && req.account.history.budget) ? listing.people.path : withNotice(back, "on"));
@@ -1426,7 +1444,9 @@ function createApp({ sessionStore }) {
       ...(await resumeChoices(req.account)),
       ...(active(req.account, "follows") ? [...(await followingChoices(req.account)), ...(await tagsChoices(req.account))] : []),
     ];
-    const offered = [...billing.amountsFor(await billing.hasPaid(req.account._id)), ...bulk.map((o) => o.topup).filter(Boolean)];
+    // This account's amounts (fundsView: a LIKESTORM ONLY account's first one smaller) and the full app's (the start
+    // page offers those to it too, for the rest of the app).
+    const offered = [...(await fundsView(req.account)).amounts, ...billing.amountsFor(await billing.hasPaid(req.account._id)), ...bulk.map((o) => o.topup).filter(Boolean)];
     if (!offered.includes(usd)) return res.redirect(303, back);
     try {
       res.redirect(303, await billing.createTopUpSession(req.account, usd, { back }));

@@ -33,6 +33,11 @@ const FEATURES = {
   // isn't re-read: the follower check was deleted), and the Follows tab. (Merged from "Follows", the
   // free badges, and "Follows, live": the "Follows you / Mutual" tags now come with any profile read, whatever's on.)
   follows: { key: "follows", label: "Follows", module: true, scopes: ["follows.read"] },
+  // LIKESTORM ONLY: a switch BESIDE the four modules, not one of them (not in MODULES, so the scheduler, Live, the
+  // mentions check and the estimator never see it): an account with only this on reads NOTHING on its own, no sync and
+  // no live events, and pays per storm alone (routes/pages.js answerStorm). Turned on by the start page's "Likestorms
+  // only" (POST /start/storm); Get started turns the four on beside it. It brings Liking (below), which a storm needs.
+  likestorm: { key: "likestorm", label: "Likestorm", module: true, scopes: ["like.read", "like.write"] },
 
   // Replies, live: X pushes each reply, mention, quote and post of yours within seconds (Live's post events) instead of
   // the next 15-minute sync reading it. X bills a post event $0.005, which for the app's owner is 5× the sync's Owned
@@ -40,7 +45,7 @@ const FEATURES = {
   liveReplies: { key: "liveReplies", label: "Replies, live", scopes: [], needs: ["inbox"] },
   // Liking: the ♥ under someone's post (the Inbox, a conversation) likes or unlikes it on X. A write; it reads the posts
   // you like as well (like.read), so the ♥ knows what you've already liked.
-  liking: { key: "liking", label: "Liking", scopes: ["like.read", "like.write"], needs: ["inbox", "people"] },
+  liking: { key: "liking", label: "Liking", scopes: ["like.read", "like.write"], needs: ["inbox", "people", "likestorm"] },
   // Replying: a reply box under a message (the Inbox, a conversation) posts your reply on X. The second write
   // (tweet.write: "create and repost on your behalf"); xtoolio only ever posts text you wrote and sent.
   replying: { key: "replying", label: "Replying", scopes: ["tweet.write"], needs: ["inbox", "people"] },
@@ -88,6 +93,10 @@ const active = (account, key) => (FEATURES[key].module ? isOn(account, key) : FE
 // The modules the account chose (on, granted or not: a paused one is still chosen). [] = it hasn't picked yet.
 const modulesOn = (account) => MODULES.filter((k) => isOn(account, k));
 
+// LIKESTORM ONLY (FEATURES.likestorm): no module on, the likestorm switch on. Its home is the Likestorm page, and
+// nothing syncs for it.
+const stormOnly = (account) => !modulesOn(account).length && isOn(account, "likestorm");
+
 // The Mongo filter for accounts that picked at least one module (the scheduler's passes).
 const MODULE_FILTER = { $or: MODULES.map((k) => ({ [`features.${k}.on`]: true })) };
 
@@ -134,4 +143,4 @@ function pullAskedAt(account) {
   return Math.max(0, ...asked.filter(Boolean).map((d) => new Date(d).getTime()));
 }
 
-module.exports = { MODULES, FEATURES, MODULE_FILTER, SCOPES_ALL, SCOPES_JOIN, SCOPES_SITE, isOn, granted, active, modulesOn, pullDue, firstReadGoing, pullAskedAt, turnOn, firstOn };
+module.exports = { MODULES, FEATURES, MODULE_FILTER, SCOPES_ALL, SCOPES_JOIN, SCOPES_SITE, isOn, granted, active, modulesOn, stormOnly, pullDue, firstReadGoing, pullAskedAt, turnOn, firstOn };

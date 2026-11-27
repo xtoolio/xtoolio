@@ -751,9 +751,19 @@ assert.deepStrictEqual(untilKnown([{ id: "9" }], new Set()).reachedKnown, false)
 // Every extra has its path in the Account schema: strict mode silently drops the $set that turns on one without it
 // (Liking once shipped that way, and could never be switched on).
 {
-  const { MODULES } = require("../services/features");
+  const { FEATURES, MODULES, MODULE_FILTER, active, modulesOn, stormOnly } = require("../services/features");
   const AccountModel = require("../models/Account");
-  for (const key of MODULES) assert.ok(AccountModel.schema.path(`features.${key}`), `Account.features.${key} is in the schema`);
+  // Every switched feature (the four modules and LIKESTORM ONLY beside them).
+  for (const key of Object.keys(FEATURES).filter((k) => FEATURES[k].module)) assert.ok(AccountModel.schema.path(`features.${key}`), `Account.features.${key} is in the schema`);
+  // LIKESTORM ONLY: Liking comes with it, yet it's no module, so nothing that syncs or prices a month ever sees it.
+  const scope = "tweet.read users.read offline.access like.read like.write follows.read tweet.write media.write";
+  const stormer = { features: { likestorm: { on: true } }, tokens: { scope } };
+  assert.ok(active(stormer, "liking") && stormOnly(stormer), "likestorm only: Liking active, storm-only");
+  assert.ok(!modulesOn(stormer).length && !MODULES.includes("likestorm") && !JSON.stringify(MODULE_FILTER).includes("likestorm"), "likestorm only is no module: the scheduler's filter, Live and the estimator never see it");
+  assert.ok(!active(stormer, "replying") && !active(stormer, "following"), "likestorm only brings Liking alone");
+  const full = { features: { inbox: { on: true }, likestorm: { on: true } }, tokens: { scope } };
+  assert.ok(!stormOnly(full), "with a module on it's the full app");
+  assert.ok(!stormOnly({ features: {}, tokens: { scope } }), "nothing on: the start page, not likestorm only");
 }
 // A profile's connection_status is the READING account's relationship (models/Follow.js), never kept on the shared
 // Person, raw copy included.
@@ -1316,22 +1326,30 @@ assert.strictEqual(backfillPageSize(50, 4), 0, "under X's 5-post page minimum: s
 assert.strictEqual(backfillPageSize(50, 0), 0, "reached: stop");
 // The options fit the account: a heavy poster gets three, everything capped at X's limits (3,200 posts +
 // 800 mentions: ~4,000 however much they've posted, even 100,000); a lighter one loses a tier that would reach no
-// further than everything; unknown counts assume the most.
-assert.deepStrictEqual(historyOptions(100000).map((o) => [o.key, o.budget]), [["1000", 1000], ["2500", 2500], ["all", 4000]]);
-assert.deepStrictEqual(historyOptions(1500).map((o) => [o.key, o.budget]), [["1000", 1000], ["all", 2300]]);
-assert.deepStrictEqual(historyOptions(150).map((o) => [o.key, o.budget]), [["all", 950]], "a light poster: just everything");
-assert.deepStrictEqual(historyOptions(undefined).map((o) => o.budget), [1000, 2500, 4000]);
+// further than everything; unknown counts assume the most. (Without a pace, reading further back: no cap.)
+const deeper = { maxDays: Infinity };
+assert.deepStrictEqual(historyOptions(100000, deeper).map((o) => [o.key, o.budget]), [["1000", 1000], ["2500", 2500], ["all", 4000]]);
+assert.deepStrictEqual(historyOptions(1500, deeper).map((o) => [o.key, o.budget]), [["1000", 1000], ["all", 2300]]);
+assert.deepStrictEqual(historyOptions(150, deeper).map((o) => [o.key, o.budget]), [["all", 950]], "a light poster: just everything");
+assert.deepStrictEqual(historyOptions(undefined, deeper).map((o) => o.budget), [1000, 2500, 4000]);
 // "Everything" names its parts: a real post count, and mentions only as a ceiling.
-assert.ok(historyOptions(2210).pop().detail.startsWith("Your 2,210 posts and up to 800 mentions · about "));
-assert.ok(historyOptions(12000).pop().detail.startsWith("Your latest 3,200 posts (X's limit) and up to 800 mentions · about "));
-const opts = historyOptions(12000);
+// Reading further back (no cap): everything X serves closes the list, said as its two parts.
+assert.ok(historyOptions(2210, deeper).pop().detail.startsWith("Your 2,210 posts and up to 800 mentions · about "));
+assert.ok(historyOptions(12000, deeper).pop().detail.startsWith("Your latest 3,200 posts (X's limit) and up to 800 mentions · about "));
+const opts = historyOptions(12000, deeper);
 assert.ok(opts[0].estimate < opts[1].estimate && opts[1].estimate < opts[2].estimate, "deeper costs more");
 // With a pace (posts + replies to you a day): stretches of time, each capped at what X serves; the first that reaches
 // it becomes "everything", and nothing longer is offered.
-assert.deepStrictEqual(historyOptions(100000, { perDay: 20 }).map((o) => [o.key, o.budget]), [["day", 20], ["week", 140], ["month", 600]], "a quiet account: a day, a week, a month");
-assert.deepStrictEqual(historyOptions(100000, { perDay: 348 }).map((o) => [o.key, o.budget]), [["day", 348], ["week", 2436], ["all", 4000]], "a busy one: its month reaches past X's 4,000, so it's everything X serves");
+assert.deepStrictEqual(historyOptions(100000, { perDay: 20, ...deeper }).map((o) => [o.key, o.budget]), [["day", 20], ["week", 140], ["month", 600]], "further back: a day, a week, a month");
+assert.deepStrictEqual(historyOptions(100000, { perDay: 348, ...deeper }).map((o) => [o.key, o.budget]), [["day", 348], ["week", 2436], ["all", 4000]], "a busy one: its month reaches past X's 4,000, so it's everything X serves");
+assert.match(historyOptions(100000, { perDay: 348, ...deeper })[2].label, /^1 month, as far as X serves$/);
+// THE FIRST READ: a week at most (a month's likes once read several times their quote on a heavy liker).
+assert.deepStrictEqual(historyOptions(100000, { perDay: 20 }).map((o) => [o.key, o.budget]), [["day", 20], ["week", 140]], "a first read: a day or a week, never a month");
+assert.deepStrictEqual(historyOptions(100000, { perDay: 348 }).map((o) => [o.key, o.budget]), [["day", 348], ["week", 2436]], "a busy account's first read stops at a week too, short of everything X serves");
 assert.deepStrictEqual(historyOptions(2433, { perDay: 600 }).map((o) => o.key), ["day", "all"], "a week already past X's limit: day, then everything");
-assert.match(historyOptions(100000, { perDay: 348 })[2].label, /^1 month, as far as X serves$/);
+assert.match(historyOptions(2433, { perDay: 600 })[1].label, /^1 week, as far as X serves$/);
+assert.deepStrictEqual(historyOptions(12000).map((o) => o.key), ["300", "1000"], "no pace: small counts, no 'everything'");
+assert.deepStrictEqual(historyOptions(100).map((o) => o.key), ["300", "all"], "no pace, a small account (100 posts + 800 mentions): 1,000 already reaches everything X serves");
 // A run's post cap: while chosen history is unread, sized to finish it (so an interrupted pull resumes at full
 // speed); once read (depth reached, or X has nothing older), the normal top-up cap.
 assert.strictEqual(runReadCap(100, 3010, { backfillRead: 2741, own: {}, mention: { backfillDone: true } }), 369, "the rest of the pull + top-up room, not 100");
@@ -1567,10 +1585,17 @@ assert.match(dates({ at: lateNight }), /^Dec 31, 2025$/u, "no zone (an offline r
     {
       const start = (step, more = {}) => eh.render(path.join(viewsDir, "start.hbs"), { settings: { views: viewsDir }, brandName: "xtoolio", csrfToken: "t", priced: true, funds: { balance: step === "money" ? 0 : 20, payable: true }, options: [{ key: "all", label: "Everything X serves", price: 10.2, affordable: true, selected: true, detail: "Your 2 posts" }], start: { steps: true, step, handle: "maya", ready: true, amounts: [{ whole: 20, covers: "1 week" }, { whole: 100, covers: "everything X serves" }] }, ...more });
       const money = (await start("money")).replace(/\s+/g, " ");
-      assert.ok(/<a class="amount" href="\/billing\/topup\?amount=20&amp;back=\/"><b>\$20<\/b><span>History: <i>1 week<\/i><\/span><\/a>/.test(money) && money.includes("<b>$100</b>") && !money.includes("start-form"), "step 1: each amount a top-up link with what it buys, no Get started yet");
+      assert.ok(/<a class="amount" href="\/billing\/topup\?amount=20&amp;back=\/start"><b>\$20<\/b><span>History: <i>1 week<\/i><\/span><\/a>/.test(money) && money.includes("<b>$100</b>") && !money.includes("start-form"), "step 1: each amount a top-up link with what it buys (back to /start), no Get started yet");
       const hist = (await start("history")).replace(/\s+/g, " ");
       assert.ok(hist.includes('form="start-form"') && /<button type="submit" class="signin">Get started<\/button>/.test(hist) && !hist.includes('class="amount"') && hist.includes("Balance $20.00"), "step 2: the options in Get started's form, the balance as step 1 done");
       assert.ok(money.includes("Welcome to xtoolio") && money.includes("homescreen-tip"), "the welcome, and the Home Screen tip (CSS shows it on a phone)");
+      // LIKESTORMS ONLY: the way out at the foot, a POST with its CSRF token and the smaller first payment; gone once
+      // chosen, when the page instead leads back to the Likestorm page.
+      const offer = (await start("money", { start: { steps: true, step: "money", handle: "maya", amounts: [], storm: true, stormDeposit: 10 } })).replace(/\s+/g, " ");
+      assert.ok(/<form class="storm-only" method="post" action="\/start\/storm"> <input type="hidden" name="_csrf" value="t">/.test(offer) && offer.includes("start with $10") && offer.includes(">Likestorms only</button>"), "the start page offers Likestorms only");
+      assert.ok(!money.includes("storm-only"), "not offered when it isn't (`storm` false)");
+      const chosen = (await start("history", { start: { steps: true, step: "history", handle: "maya", ready: true, amounts: [], stormOnly: true } })).replace(/\s+/g, " ");
+      assert.ok(chosen.includes('<a href="/likestorm">') && !chosen.includes("/start/storm"), "likestorm only: back to Likestorm, nothing to offer");
     }
     // QUOTE (the ↻'s menu): X's API quotes are Enterprise only, so it's X's own compose window on the post's link,
     // never a form here.

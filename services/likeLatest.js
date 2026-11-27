@@ -1,4 +1,4 @@
-// LIKE SOMEONE'S LATEST POSTS (a person's page, "♥ Like latest N": routes/people.js POST /people/:id/like-latest):
+// LIKE SOMEONE'S LATEST POSTS (THE LIKESTORM: routes/likestorm.js → routes/pages.js answerStorm):
 // read their newest posts from X and like the ones you haven't, as many as X's like window allows right now. Their OWN
 // posts, X's profile "Posts" tab (`exclude=replies,retweets`: a reply is them talking to someone else, a repost
 // someone else's words). Read with this account's token, newest first, a page at a time, only until there are enough

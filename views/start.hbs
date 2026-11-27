@@ -3,8 +3,11 @@
       off-site and comes back here), then HOW FAR BACK and Get started, which turns everything on (POST /start). An
       account that doesn't pay here has only the second. Nothing to choose about modules here (this
       page is only onboarding); Settings has the switches. As few words as will do (people don't read,
-      so just the options, and crystal clear what they're buying). --}}
+      so just the options, and crystal clear what they're buying). Its links say /start (web.js GET /start): home ("/")
+      is the Likestorm page for a LIKESTORM ONLY account, which comes here for the rest. At its foot, the way out for
+      someone who only wants likestorms (POST /start/storm: nothing syncs, a smaller first payment). --}}
 <section class="onboard">
+  {{#if start.stormOnly}}<p class="post-back"><a href="/likestorm">{{> icon-back}}Likestorm</a></p>{{/if}}
   {{!-- The welcome (a big header with the mark and a welcome that stands out):
         THE MARK big, its dots popping in one after another once (app.css; still under reduced motion). --}}
   <header class="onboard-head">
@@ -20,19 +23,19 @@
   </aside>
   {{#if start.steps}}
     <ol class="steps">
-      <li class="{{#if (eq start.step "money")}}now{{else}}done{{/if}}">{{#if (eq start.step "money")}}<span class="step-n">1</span>Add money{{else}}<a href="/?step=money"><span class="step-n">✓</span>Balance {{dollars funds.balance}}</a>{{/if}}</li>
+      <li class="{{#if (eq start.step "money")}}now{{else}}done{{/if}}">{{#if (eq start.step "money")}}<span class="step-n">1</span>Add money{{else}}<a href="/start?step=money"><span class="step-n">✓</span>Balance {{dollars funds.balance}}</a>{{/if}}</li>
       {{!-- Back to step 2 from "add more" (?step=money with money in). --}}
-      <li class="{{#if (eq start.step "history")}}now{{/if}}">{{#if funds.balance}}{{#if (eq start.step "money")}}<a href="/"><span class="step-n">2</span>How far back</a>{{else}}<span class="step-n">2</span>How far back{{/if}}{{else}}<span class="step-n">2</span>How far back{{/if}}</li>
+      <li class="{{#if (eq start.step "history")}}now{{/if}}">{{#if funds.balance}}{{#if (eq start.step "money")}}<a href="/start"><span class="step-n">2</span>How far back</a>{{else}}<span class="step-n">2</span>How far back{{/if}}{{else}}<span class="step-n">2</span>How far back{{/if}}</li>
     </ol>
   {{/if}}
   {{#if (eq start.step "money")}}
     <div class="amounts">
-      {{#each start.amounts}}<a class="amount" href="/billing/topup?amount={{whole}}&amp;back=/"><b>${{whole}}</b>{{#if covers}}<span>History: <i>{{covers}}</i></span>{{/if}}</a>{{/each}}
+      {{#each start.amounts}}<a class="amount" href="/billing/topup?amount={{whole}}&amp;back=/start"><b>${{whole}}</b>{{#if covers}}<span>History: <i>{{covers}}</i></span>{{/if}}</a>{{/each}}
     </div>
     <p class="fine">Pay as you go: X’s price plus a markup, only for what’s used. Prepaid and non-refundable; syncing pauses at $0. <a href="/terms">Terms</a></p>
   {{else}}
     {{#if funds}}{{#unless funds.payable}}<p class="fine">Payments aren’t set up yet.</p>{{/unless}}{{/if}}
-    {{> history-choice pick="start-form" back="/"}}
+    {{> history-choice pick="start-form" back="/start"}}
     <form id="start-form" class="signin-row start-form" method="post" action="/start" data-busy>
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
       {{#if start.regrant}}
@@ -40,6 +43,13 @@
       {{else}}
         <button type="submit" class="signin"{{#unless start.ready}} disabled{{/unless}}>Get started</button>{{#if priced}}{{> paygo}}{{/if}}
       {{/if}}
+    </form>
+  {{/if}}
+  {{#if start.storm}}
+    <form class="storm-only" method="post" action="/start/storm">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      <p><b>Just here for likestorms?</b> Skip the rest{{#if start.stormDeposit}} and start with ${{start.stormDeposit}}{{/if}}. Nothing syncs: you only pay for each storm.</p>
+      <button type="submit" class="btn">Likestorms only</button>
     </form>
   {{/if}}
 </section>

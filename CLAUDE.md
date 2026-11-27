@@ -2,7 +2,8 @@
 
 A side-tool next to the X app (not a client): your replies, mentions and quotes as an Inbox, who you go back and forth
 with, who liked and reposted your posts, who followed and unfollowed you. Four MODULES, each switched on its own and
-priced on its own: **Inbox, People, Likes, Follows** (`services/features.js` is the one registry).
+priced on its own: **Inbox, People, Likes, Follows** (`services/features.js` is the one registry). Beside them,
+**Likestorm only**: a switch that is no module, so an account with only it on syncs nothing and pays per storm.
 
 The stack is deliberately boring: Node 22+, Express 5, Handlebars rendered on the server (no build step), plain
 JavaScript (no TypeScript), MongoDB through Mongoose, pm2. Multi-user through Sign in with X.

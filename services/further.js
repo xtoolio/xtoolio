@@ -56,7 +56,7 @@ function options(account, state, { owned = false, perDay = null, stored = {} } =
   const again = likes.backfillDone && !likes.backfillToken ? Math.ceil((likes.backfillRead || 0) / LIKES_PAGE) * LIKES_PAGE : 0;
   const cap = Number.isFinite(account.likeCount) ? account.likeCount : Infinity;
   const n = (v) => v.toLocaleString("en-US");
-  const tiers = historyOptions(account.postCount, { owned, perDay, likeCount: account.likeCount });
+  const tiers = historyOptions(account.postCount, { owned, perDay, likeCount: account.likeCount, maxDays: Infinity });
   // The stretches stop at a month when a month doesn't reach what X serves; past them (a history already deeper than a
   // month) the rest is still there to read: everything X serves closes the list.
   const all = Math.min(X_POST_LIMIT, Number.isFinite(account.postCount) ? account.postCount : X_POST_LIMIT) + X_MENTION_LIMIT;
