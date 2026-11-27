@@ -30,6 +30,7 @@ const { stopping } = require("../lib/shutdown");
 const { accessToken, meterSettings } = require("./accounts");
 const pause = require("./pause");
 const { metered, firstToday } = require("./usage");
+const { PRICE } = require("../lib/pricing");
 const { store, storeContext, announce } = require("./sync");
 const { refreshOwedSafely } = require("./inboxCount");
 const { refreshUnseenSafely } = require("./unseenCount");
@@ -46,11 +47,12 @@ async function ensureSubs(accountId) {
   ensuring.add(accountId);
   try {
     // Claim the flag first: one set again while this runs is a new change, and the watcher sees it.
-    const account = await Account.findOneAndUpdate({ _id: accountId }, { $unset: { "live.due": "" } }, { projection: "username tokens.scope needsReauth history features balanceMicros pause live.subs", returnDocument: "after" }).lean();
+    const account = await Account.findOneAndUpdate({ _id: accountId }, { $unset: { "live.due": "" } }, { projection: "username tokens.scope needsReauth history features balanceMicros pause live.subs live.day live.dayUsd", returnDocument: "after" }).lean();
     if (!account) return;
-    // Out of balance, or HELD (THE PAUSE, services/pause.js): no subscriptions, so X delivers and bills nothing.
+    // Out of balance, HELD (THE PAUSE, services/pause.js), or past today's LIVE DAY CAP: no subscriptions, so X
+    // delivers and bills nothing.
     const dry = meterSettings().billing.paused(account);
-    const want = desiredSubs(account, { paused: dry || pause.held(account, dry) });
+    const want = desiredSubs(account, { paused: dry || pause.held(account, dry) || capReached(account) });
     const token = await accessToken(accountId).catch(() => null);
     const auth = token || config.x.bearerToken;
     // X allows ONE subscription per event type per user (a second is refused with a 400, seen).
@@ -93,7 +95,35 @@ async function dropSubs(accountId) {
 async function notePending(accountId, ev, resourceId, now = new Date()) {
   const pending = { accountId, what: ev.what, resourceId };
   const r = await LivePending.updateOne(pending, { $setOnInsert: { cls: ev.cls, at: now } }, { upsert: true });
-  if (r.upsertedCount) await firstToday(ev.resource, [resourceId], now);
+  if (!r.upsertedCount) return;
+  await firstToday(ev.resource, [resourceId], now);
+  await countDay(accountId, PRICE[ev.cls] || 0, now);
+}
+
+// THE LIVE DAY CAP (config.x.liveDayMaxUsd): X's cost of the events delivered to one account in a UTC day, counted on
+// the account (live.day, live.dayUsd). The event that reaches the cap flags its subscriptions (live.due): ensureSubs
+// drops them (capReached) until the day turns, when the hourly ensure brings them back. Each event is X's to bill and
+// the account's to pay, and anyone can make events about someone (follow and unfollow them all day: ~$12 a day, onto
+// their card through auto-refill), so a day's worth has an end; the sync keeps the Inbox current meanwhile. What's lost
+// for the rest of that day is what only Live carries: follows of you and some likes.
+const dayOf = (d) => d.toISOString().slice(0, 10);
+const capReached = (account, now = new Date()) => {
+  const max = config.x.liveDayMaxUsd;
+  const l = (account && account.live) || {};
+  return max > 0 && l.day === dayOf(now) && (l.dayUsd || 0) >= max;
+};
+async function countDay(accountId, usd, now = new Date()) {
+  const max = config.x.liveDayMaxUsd;
+  if (!(max > 0) || !(usd > 0)) return;
+  const day = dayOf(now);
+  // The same day: add to it. Another day (or none yet): start it. A start racing an add loses one event's count at most.
+  const after =
+    (await Account.findOneAndUpdate({ _id: accountId, "live.day": day }, { $inc: { "live.dayUsd": usd } }, { returnDocument: "after", projection: "username live.dayUsd" }).lean()) ||
+    (await Account.findOneAndUpdate({ _id: accountId, "live.day": { $ne: day } }, { $set: { "live.day": day, "live.dayUsd": usd } }, { returnDocument: "after", projection: "username live.dayUsd" }).lean());
+  if (after && after.live.dayUsd >= max && after.live.dayUsd - usd < max) {
+    await Account.updateOne({ _id: accountId }, { $set: { "live.due": true } });
+    console.log(`[live] @${after.username}: today's live events reached $${max} of X's cost; subscriptions off until the UTC day turns`);
+  }
 }
 
 // How close two follow events of one person, one way, must be to be one (ingest: X sent one unfollow twice).
@@ -342,4 +372,4 @@ async function stopDuties() {
   if (accountsWatch) await accountsWatch.close().catch(() => {});
 }
 
-module.exports = { ingest, notePending, ensureSubs, dropSubs, flushPending, startStream, startDuties, stopDuties, stopStream };
+module.exports = { ingest, notePending, capReached, ensureSubs, dropSubs, flushPending, startStream, startDuties, stopDuties, stopStream };

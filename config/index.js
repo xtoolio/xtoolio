@@ -19,13 +19,19 @@ function optEnv(name, fallback = "") {
 const port = Number(optEnv("PORT", "3100"));
 
 // Who may create an account. Every new account starts paid X syncing, so sign-up is closed by default:
-// a comma list of X user ids (digits: the safe form, an id never changes hands) and/or usernames (case-insensitive),
-// or "*" for anyone. An existing account can always sign in.
+// a comma list of X user ids (digits: an id never changes hands), or "*" for anyone. An existing account can always
+// sign in.
 const allowed = optEnv("ALLOWED_USERNAMES", "")
   .split(",")
   .map((s) => s.trim().replace(/^@/, "").toLowerCase())
   .filter(Boolean);
 const isId = (s) => /^\d{1,20}$/.test(s);
+// ALLOWED_USERNAMES lets in X user ids (and "*", anyone). A HANDLE there is IGNORED: a handle changes hands on X, so
+// whoever renamed their own account to an allowlisted handle that hadn't signed up yet would get in (the admin list's
+// rule; here it's a warning, not a refusal to boot, so a deployment whose list still holds handles keeps running and
+// those people go on the waitlist, to be let in by id or by Admin → Waitlist).
+const allowedHandles = allowed.filter((s) => s !== "*" && !isId(s));
+if (allowedHandles.length) console.warn(`[config] ALLOWED_USERNAMES: ${allowedHandles.length} handle(s) ignored (X user ids only; a handle can be taken by anyone who renames to it)`);
 
 // ADMIN_IDS: X user ids only (a handle there would quietly make nobody an admin, so it refuses to boot).
 function adminsFrom() {
@@ -69,7 +75,7 @@ const config = {
   sessionDays: 30, // the cookie's life AND the session store's TTL (web.js, app.js)
   // 32 bytes, base64: seals each account's X tokens at rest (lib/crypto.js).
   tokenKey: mustEnv("TOKEN_KEY"),
-  signup: { anyone: allowed.includes("*"), ids: new Set(allowed.filter(isId)), usernames: new Set(allowed.filter((u) => u !== "*" && !isId(u))) },
+  signup: { anyone: allowed.includes("*"), ids: new Set(allowed.filter(isId)) },
   // THE INVITE LINKS (services/invites.js): how many people can sign up through each account's link, skipping the
   // waitlist. 0: no links. Meaningless while sign-up is open to anyone.
   invites: { perAccount: Number(optEnv("INVITES_PER_ACCOUNT", "5")) },
@@ -109,6 +115,10 @@ const config = {
     // takes (services/live.js; docs/LIVE.md). Unset: no live events, sync alone. A client-credentials token minted
     // from the OAuth 2.0 id/secret is refused by the stream ("Unknown" authentication), so it must be this one.
     bearerToken: optEnv("X_BEARER_TOKEN", "") || null,
+    // THE LIVE DAY CAP (services/live.js): X's cost, in dollars, of the live events one account may be delivered in a
+    // UTC day. Past it the account's subscriptions go until the day turns (the sync carries on), so nobody can run up
+    // someone's bill by following and unfollowing them all day (X bills each event, and the account pays it). 0 = none.
+    liveDayMaxUsd: Number(optEnv("LIVE_DAY_MAX_USD", "5")),
   },
 
   sync: {

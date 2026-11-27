@@ -106,6 +106,8 @@ const ok = (cond, msg) => {
     // THE INVITE LINKS (services/invites.js): `member` (an account) has a link with config.invites.perAccount places.
     if (invites.enabled()) {
       const max = config.invites.perAccount;
+      // It has paid (where the site charges, only a paying account may invite: checked below).
+      await BalanceEntry.create({ accountId: member.id, micros: 20e6, kind: "topup", ref: `verify-topup-${member.id}`, label: "verify" });
       const code = (await invites.codeFor(member.id))._id;
       ok(invites.CODE.test(code) && (await invites.codeFor(member.id))._id === code, "one link per account, made once");
       ok((await invites.redeem(code, member)) === null, "you can't take a place on your own link");
@@ -124,14 +126,28 @@ const ok = (cond, msg) => {
       ok(page && page.from.id === member.id && page.open === false && (await invites.pageFor("nope")) === null, "the page: whose link, and that it's used up; a bad code is none");
       const view = await invites.viewFor({ _id: member.id });
       ok(view.left === 0 && view.max === max && view.url.endsWith(`/i/${code}`) && view.people.length === max, "Settings: none left, and who came in");
+      // WHO MAY INVITE where the site charges (invites.mayInvite): an account that has PAID. `newcomer` holds only a
+      // credit (the invite credit above), so it may not, until a top-up.
+      const was = config.billing.enabled;
+      config.billing.enabled = true;
+      try {
+        const theirs = (await invites.codeFor(newcomer.id))._id;
+        const locked = await invites.viewFor({ _id: newcomer.id });
+        ok(!(await invites.mayInvite(newcomer.id)) && locked.locked === true && !locked.url, "charging, a credit alone isn't paying: no link in Settings");
+        ok((await invites.redeem(theirs, guests[0])) === null && (await invites.pageFor(theirs)).open === false, "…its link (made before) lets nobody in, and its page says it's closed");
+        await BalanceEntry.create({ accountId: newcomer.id, micros: 20e6, kind: "topup", ref: `verify-topup-${newcomer.id}`, label: "verify" });
+        ok((await invites.mayInvite(newcomer.id)) && (await invites.redeem(theirs, guests[0])) === newcomer.id, "after a top-up: its link works");
+      } finally {
+        config.billing.enabled = was;
+      }
     } else console.log("verify-waitlist: invite links off here (sign-up open, or INVITES_PER_ACCOUNT=0): not checked");
     console.log(`verify-waitlist: ${checks} checks pass`);
   } finally {
     await Waitlist.deleteMany({ _id: { $in: [...ids, newcomer.id, member.id, ...guests.map((g) => g.id)] } });
-    await InviteCode.deleteMany({ accountId: member.id });
+    await InviteCode.deleteMany({ accountId: { $in: [member.id, newcomer.id] } });
     await Account.deleteOne({ _id: member.id, username: member.username });
     await Account.deleteOne({ _id: newcomer.id, username: newcomer.username });
-    await BalanceEntry.deleteMany({ accountId: newcomer.id });
+    await BalanceEntry.deleteMany({ accountId: { $in: [newcomer.id, member.id] } });
     await mongoose.disconnect();
   }
 })().catch((e) => {

@@ -19,13 +19,13 @@ const { writesLeft } = require("../services/extras");
 const { LIKE_ALL_MAX, inboxCards, withCardLike, threadFollowFor } = require("../services/conversations");
 const { requireAccount, safeBack, withNotice, readyOrRender, replyBox, likeAllowance, wantsJson, balanceText, xFailure, bulkLabel, followMany, likeEach, keepLiveSwitch } = require("./pages");
 
-module.exports = function inboxRoutes({ estimateLimiter }) {
+module.exports = function inboxRoutes() {
   const router = express.Router();
 
   // The Inbox (services/inbox.js): replies, mentions and quotes as conversation cards, waiting until you mark them
   // done: Waiting / Done / All, a search, a sort, pages (the listing engine Your people uses). Every post opens on X; the ♥
   // (Liking) shows liked in place.
-  router.get("/", estimateLimiter, async (req, res) => {
+  router.get("/", async (req, res) => {
     const state = await readyOrRender(req, res, "inbox");
     if (!state) return;
     const L = inbox.listing;

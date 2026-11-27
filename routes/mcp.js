@@ -56,7 +56,10 @@ async function signedIn(req, res, next) {
   const m = /^Bearer (\S+)$/.exec(req.get("authorization") || "");
   const bearer = m && m[1];
   const found = !bearer ? null : bearer.startsWith(AgentGrant.PREFIX.ACCESS) ? await AgentGrant.accountFor(bearer) : await AgentToken.accountFor(bearer);
-  const account = found ? await Account.findById(found.accountId, Account.REQUEST_FIELDS).lean() : null;
+  let account = found ? await Account.findById(found.accountId, Account.REQUEST_FIELDS).lean() : null;
+  // A token made before its account was: the account was deleted and made again (its _id is the X id), and a token
+  // the deletion failed to remove (services/deleteAccount.js retries, then logs) must not open the new one.
+  if (account && found.since && account.createdAt && new Date(found.since) < new Date(account.createdAt)) account = null;
   if (!account) return rpcError(res, 401, -32001, `Sign in to ${config.brandName}: connect this app from ${config.brandName}, or send Authorization: Bearer xto_…`, { "WWW-Authenticate": `Bearer realm="${config.brandName}", resource_metadata="${agentOAuth.RESOURCE_METADATA}"${bearer ? ', error="invalid_token"' : ""}` });
   req.agent = { account, tokenId: found.tokenId || found.grantId, name: found.name };
   next();
@@ -69,7 +72,10 @@ module.exports = function mcpRoutes() {
   const byAddress = rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false, keyGenerator: (req) => `mcp:${ipKeyGenerator(req.ip)}`, handler: (req, res) => rpcError(res, 429, -32002, "Too many requests. Wait a minute.") });
   const byToken = rateLimit({ windowMs: 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false, keyGenerator: (req) => `mcp-token:${req.agent.tokenId}`, handler: (req, res) => rpcError(res, 429, -32002, "Too many requests for this token: 60 a minute. Wait a minute.") });
 
-  router.post(PATH, byAddress, express.json({ limit: "100kb" }), signedIn, byToken, async (req, res) => {
+  // ONE message a request: a JSON-RPC batch (an array, which the protocol's current revision dropped and the SDK still
+  // takes, up to 100) ran up to 100 tool calls at once under one count of the limits, each rebuilding the Inbox.
+  const oneMessage = (req, res, next) => (Array.isArray(req.body) ? rpcError(res, 400, -32600, "Batches aren't accepted: send one JSON-RPC message per request.") : next());
+  router.post(PATH, byAddress, express.json({ limit: "100kb" }), oneMessage, signedIn, byToken, async (req, res) => {
     const server = serverFor(req.agent.account, { tokenId: req.agent.tokenId, name: req.agent.name });
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     res.on("close", () => {

@@ -20,7 +20,7 @@ for (const [k, v] of Object.entries({
   TOKEN_KEY: crypto.randomBytes(32).toString("base64"),
 })) process.env[k] = process.env[k] || v;
 process.env.APP_ORIGIN = "http://127.0.0.1:3100";
-process.env.ALLOWED_USERNAMES = "Invited_One";
+process.env.ALLOWED_USERNAMES = "123456789, Invited_One"; // an id, and a handle (ignored: checked below)
 process.env.ADMIN_IDS = "424242"; // the admin is an X user ID (a username changes hands on X)
 // The front page checks assume a site that doesn't charge and links no repo (a self-hosted copy), whatever the local
 // .env says (a preview once set both, and these checks read that instead).
@@ -278,6 +278,22 @@ for (const file of [...filesUnder(path.join(root, "routes"), ".js"), path.join(r
 // ── public JS parses (a parse error in the browser fails silently) ──
 for (const file of filesUnder(path.join(root, "public"), ".js")) execFileSync(process.execPath, ["--check", file]);
 
+// ── AT MOST N AT ONCE per account (lib/inFlight.js: a reply's or feedback's pictures held in memory, /live streams) ──
+{
+  const { inFlight } = require("../lib/inFlight");
+  const slots = inFlight(2);
+  const a1 = slots.take("a");
+  const a2 = slots.take("a");
+  assert.ok(a1 && a2 && slots.take("a") === null, "a third at once for one account is refused");
+  assert.ok(slots.take("b"), "…another account's own places are its own");
+  a1();
+  a1(); // released twice (a close and an error path): one place back, not two
+  assert.ok(slots.take("a") && slots.take("a") === null, "a release gives back exactly one place");
+}
+for (const [file, door] of [["web.js", "oneUploadAtATime, receiveMedia"], ["web.js", "liveSlots.take("], ["routes/feedback.js", "oneAtATime, receiveShots"], ["web.js", 'keyGenerator: (req) => `account:${req.account._id}`'], ["web.js", 'req.method === "GET" ? estimateLimiter(req, res, next)']]) {
+  assert.ok(fs.readFileSync(path.join(root, file), "utf8").includes(door), `${file} keeps its per-account limit (${door})`);
+}
+
 // ── sealed tokens ──
 const sealer = createSealer(process.env.TOKEN_KEY);
 const sealed = sealer.seal("access-token-value");
@@ -291,9 +307,13 @@ assert.throws(() => createSealer(crypto.randomBytes(16).toString("base64")), /32
 // ── PKCE + the allowlist ──
 const { verifier, challenge } = pkcePair();
 assert.strictEqual(challenge, crypto.createHash("sha256").update(verifier).digest("base64url"), "S256 challenge");
-assert.ok(maySignIn(false, "invited_one"), "allowlisted (case-insensitive) may create an account");
-assert.ok(!maySignIn(false, "stranger"), "anyone else may not");
-assert.ok(maySignIn(true, "stranger"), "an existing account can always sign back in");
+assert.ok(maySignIn(false, "123456789"), "an allowlisted X id may create an account");
+assert.ok(!maySignIn(false, "987654321"), "anyone else may not");
+{
+  const { signup } = require("../config");
+  assert.ok(!signup.usernames && signup.ids.size === 1 && !signup.anyone, "a HANDLE in the allowlist lets nobody in (it changes hands on X): only the id counts");
+}
+assert.ok(maySignIn(true, "987654321"), "an existing account can always sign back in");
 assert.deepStrictEqual(SCOPES, ["tweet.read", "users.read", "offline.access"], "every sign-in: read-only base scopes (widen deliberately, not by accident)");
 // EVERY sign-in asks for the same full set (services/features.js SCOPES_ALL; no half state): the base, the
 // modules' reads, and the only writes, liking, following, replying and a reply's pictures: nothing else that writes or touches DMs.
@@ -535,6 +555,19 @@ const rawGet = (port, pathname, headers) =>
     for (const token of ["nope", "xto_short", `xto_${"a".repeat(43)}!`]) assert.strictEqual((await mcp({ authorization: `Bearer ${token}` })).status, 401, `/mcp refuses a token of the wrong shape (${token.slice(0, 12)})`);
     assert.strictEqual((await mcp({ cookie: home.headers.get("set-cookie") || "" })).status, 401, "/mcp ignores cookies: a browser session isn't a token");
     assert.strictEqual((await mcp({}, "GET")).status, 405, "/mcp has no stream to open (stateless)");
+    // ONE MESSAGE A REQUEST: a batch ran up to 100 tool calls under one count of the limits; refused before the token.
+    const batch = await fetch(`${base}/mcp`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify([rpc, { ...rpc, id: 2 }]) });
+    assert.ok(batch.status === 400 && (await batch.json()).error.code === -32600, "/mcp refuses a JSON-RPC batch (400, -32600)");
+    // /authorize REFUSES BAD PARAMETERS ON THIS SITE (agentOAuth authorizeGuard): the SDK sent them to the app's
+    // registered address, an open redirect for anyone who registers one. Checked before any client lookup, so no database.
+    for (const [extra, code] of [[{ response_type: "token" }, "invalid_request"], [{ code_challenge: "" }, "invalid_request"], [{ code_challenge_method: "plain" }, "invalid_request"], [{ resource: "https://evil.example/mcp" }, "invalid_target"], [{ state: "x".repeat(1025) }, "invalid_request"]]) {
+      const q = new URLSearchParams({ client_id: "any", redirect_uri: "https://evil.example/cb", response_type: "code", code_challenge: "c", code_challenge_method: "S256", ...extra });
+      const r = await fetch(`${base}/authorize?${q}`, { redirect: "manual" });
+      assert.ok(r.status === 400 && !r.headers.get("location") && (await r.json()).error === code, `/authorize refuses ${JSON.stringify(extra).slice(0, 40)} here, no redirect`);
+    }
+    // …and a POST body past 8 kB is refused before anything is kept (each pending request is a row for ten minutes).
+    const fat = new URLSearchParams({ client_id: "any", response_type: "code", code_challenge: "c", code_challenge_method: "S256", state: "x".repeat(20000) });
+    assert.strictEqual((await fetch(`${base}/authorize`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: fat.toString(), redirect: "manual" })).status, 413, "/authorize refuses a body past 8 kB");
     // SIGN-IN FOR AGENT APPS (services/agentOAuth.js, the SDK's endpoints): a 401 points at the protected-resource
     // document, which names /mcp and its authorization server, whose metadata offers registration and PKCE (S256 only).
     // The approve page is a signed-in form like any other: no CSRF token, no answer.

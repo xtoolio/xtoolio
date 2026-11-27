@@ -111,6 +111,10 @@ const AccountSchema = new mongoose.Schema(
       due: Boolean,
       ensuredAt: Date,
       error: String,
+      // THE LIVE DAY CAP (services/live.js capReached): the UTC day ("YYYY-MM-DD") and X's cost of the events delivered
+      // to this account on it.
+      day: String,
+      dayUsd: Number,
     },
     // The IANA zone every date is shown in (lib/timezone.js; unset = UTC). The browser's, saved at the first
     // sign-in that reports one; changed in Settings.
@@ -147,6 +151,12 @@ const AccountSchema = new mongoose.Schema(
     // The exactly-once guard: the last 500 movements applied ("run:<UsageEntry id>", "topup:<invoice id>"). A
     // movement's filter requires its key absent and pushes it in the same atomic write as the $inc.
     appliedRefs: { type: [String], default: undefined },
+    // THE HOLDS (services/balance.js hold): what each running unit of X work has set aside on this balance, in
+    // micro-dollars at its rate, one entry per unit (`u` = its UsageEntry id). Before every request to X a unit raises its
+    // own entry to what it has spent plus that request's most, in ONE conditional write that every unit running at once
+    // goes through, so together they never set aside more than the balance above the floor. The unit's charge pulls its
+    // entry (chargeUnit). Until this, each unit saw the whole balance, and many started at once took it far below zero.
+    holds: { type: [{ _id: false, u: String, m: Number }], default: undefined },
     // Their customer in xtoolio's Stripe account (services/billing.js ensureCustomer: verified before reuse, so an id
     // from test mode read under the live key is replaced, not a dead end).
     stripeCustomerId: String,

@@ -3,6 +3,7 @@
 // person (Follow, ↻ refresh). Mounted by web.js where /people always was. /people/circle comes before /people/:id.
 "use strict";
 
+const crypto = require("crypto");
 const express = require("express");
 const config = require("../config");
 const { noticeFor } = require("../lib/notices");
@@ -200,8 +201,26 @@ module.exports = function peopleRoutes() {
 
   // Its share image (services/circleImage.js), kept in memory per circle version (`circle.at`): X's card fetcher and
   // everyone after it get the same PNG without drawing it again. A new version has a new address (circleImageHref).
+  // Anyone can ask for it, so a draw (up to 275 pictures fetched, then a render that holds the process) is done ONCE
+  // per version however many ask at the same moment (the cache holds the drawing in progress, not only the PNG), the
+  // least recently asked for goes first, and this process draws one at a time (the rest wait their turn).
+  // The key is the circle's version AND who's drawn in it: someone in it who went private since leaves the picture at
+  // the next ask (publicCircle leaves them out), not only when the circle changes.
   const circlePngs = new Map();
   const CIRCLE_PNGS_MAX = 64;
+  let drawing = Promise.resolve();
+  const drawn = (key, make) => {
+    let png = circlePngs.get(key);
+    if (png) circlePngs.delete(key); // asked for again: the newest
+    else {
+      png = drawing.then(make, make);
+      drawing = png.catch(() => {});
+      png.catch(() => circlePngs.delete(key)); // a failed draw isn't kept
+      if (circlePngs.size >= CIRCLE_PNGS_MAX) circlePngs.delete(circlePngs.keys().next().value);
+    }
+    circlePngs.set(key, png);
+    return png;
+  };
   // One route per shape (CIRCLE_IMAGE_FILES): the card and the square.
   for (const [shape, file] of Object.entries(CIRCLE_IMAGE_FILES)) {
     router.get(`/@:username/${file}`, async (req, res, next) => {
@@ -209,13 +228,9 @@ module.exports = function peopleRoutes() {
       if (!found) return next();
       const { owner, members } = found;
       const size = sizeKeyOf(owner);
-      const key = `${owner._id}:${shape}:${size}:${new Date(owner.circle.at || 0).getTime()}`;
-      let png = circlePngs.get(key);
-      if (!png) {
-        png = await circlePng({ owner, people: members, size, siteDomain: config.siteDomain, siteX: config.siteX || null, shape });
-        if (circlePngs.size >= CIRCLE_PNGS_MAX) circlePngs.delete(circlePngs.keys().next().value); // the oldest
-        circlePngs.set(key, png);
-      }
+      const who = crypto.createHash("sha1").update(members.map((m) => m.id).join(",")).digest("hex").slice(0, 12);
+      const key = `${owner._id}:${shape}:${size}:${new Date(owner.circle.at || 0).getTime()}:${who}`;
+      const png = await drawn(key, () => circlePng({ owner, people: members, size, siteDomain: config.siteDomain, siteX: config.siteX || null, shape }));
       res.set({ "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" });
       res.send(png);
     });

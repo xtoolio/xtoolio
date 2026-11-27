@@ -72,8 +72,8 @@ This file is the short guide for working on the code. The bigger parts have thei
 
 - Sign in with X is OAuth 2.0 + PKCE; the pending sign-in lives in the session, single-use, 10 minutes. X tokens are
   sealed with AES-256-GCM (`lib/crypto.js`, `TOKEN_KEY`) and opened only right before a call.
-- Sign-up is closed by default (`ALLOWED_USERNAMES`); everyone else goes on the waitlist. Admins are X user ids
-  (`ADMIN_IDS`), never handles.
+- Sign-up is closed by default (`ALLOWED_USERNAMES`: X user ids, a handle there is ignored); everyone else goes on the
+  waitlist. Admins are X user ids (`ADMIN_IDS`), never handles.
 - A private account's post is drawn for an account only when X showed it to that account
   (`services/accountData.js visibleTo`, the one rule every loader uses).
 - Agents reach an account's data at `/mcp` (`routes/mcp.js`, `services/agentTools.js`), by OAuth or a token made in

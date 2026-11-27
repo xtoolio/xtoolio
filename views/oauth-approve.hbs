@@ -5,12 +5,18 @@
 <section class="choose connect">
   {{#if ask}}
     {{!-- The place beside the name, first thing read: the name is the app's own claim, the place is the one thing it
-          can't fake. --}}
-    <h1>Connect {{ask.name}}{{#if ask.place}} <span class="connect-place">({{ask.place}})</span>{{/if}}?</h1>
+          can't fake. An app xtoolio doesn't know (services/agentOAuth.js KNOWN_HOMES: anyone can register one, and
+          call it "Claude"): the PLACE leads, and its name is said as its claim, with a warning. --}}
+    {{#if ask.known}}
+      <h1>Connect {{ask.name}}{{#if ask.place}} <span class="connect-place">({{ask.place}})</span>{{/if}}?</h1>
+    {{else}}
+      <h1>Connect an app at {{ask.place}}?</h1>
+      <p class="connect-warn">{{brandName}} doesn’t know this app. It calls itself “{{ask.name}}”. Approve only if you just added {{brandName}} to an app at <b>{{ask.place}}</b> yourself.</p>
+    {{/if}}
     <div class="panel">
       <div class="prow">
         <div class="prow-text">
-          <span class="prow-name">{{ask.name}} will be able to</span>
+          <span class="prow-name">{{#if ask.known}}{{ask.name}}{{else}}It{{/if}} will be able to</span>
           <ul class="connect-list">
             <li>read your {{brandName}} Inbox, conversations, people and posts</li>
             <li>leave draft replies here, for you to send</li>

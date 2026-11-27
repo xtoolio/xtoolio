@@ -301,7 +301,7 @@ async function dbChecks() {
   const Follow = require("../models/Follow");
 
   const tag = `verify-billing-${crypto.randomBytes(4).toString("hex")}`;
-  const ids = { a: `${tag}-a`, partner: `${tag}-partner`, owner: `${tag}-owner`, refill: `${tag}-refill` };
+  const ids = { a: `${tag}-a`, partner: `${tag}-partner`, owner: `${tag}-owner`, refill: `${tag}-refill`, hold: `${tag}-hold` };
   const bal = createBalance({ enabled: true, ownerId: ids.owner, multiplier: 1.5, floorMicros: 0 });
   const acctIds = Object.values(ids);
   const unit = (accountId, fields) => UsageEntry.create({ accountId, kind: "sync", label: "verify", startedAt: new Date(), status: "ok", chargeDue: true, ...fields });
@@ -489,6 +489,71 @@ async function dbChecks() {
       const eb = await UsageEntry.findOne({ accountId: ceilId, bulkRead: true }).lean();
       ok(Math.abs(seen.bulk - 3 / 1.15) < 1e-9 && Math.abs(eb.ceilingUsd - 3 / 1.15) < 1e-9, "a history read is re-ceiled at the onboarding rate: $3 covers $2.61 of X's prices at +15%");
     }
+    // THE HOLDS: twenty units started AT ONCE on a $3 balance (×1.5: $2 of X's prices), each asking again and again for
+    // pages of 100 posts ($0.50 each), take $2 between them, never more, and the balance ends at zero, not below. Before
+    // the holds each saw the whole $3 and all twenty read to it (−$57).
+    {
+      const holdId = ids.hold;
+      await Account.create({ _id: holdId, username: `${tag}h`, balanceMicros: toMicros(3) });
+      const held = createBalance({ enabled: true, ownerId: ids.owner, multiplier: 1.5, floorMicros: 0 });
+      const got = [];
+      await Promise.all(
+        Array.from({ length: 20 }, () =>
+          metered({ accountId: holdId, kind: "sync", label: "verify", billing: held }, async (meter) => {
+            for (let i = 0; i < 10; i++) {
+              const k = await meter.fit(100, 0.005);
+              if (k < 5) break; // X's smallest page: the clean stop lib/x.js makes
+              got.push(k);
+              await meter.recordCounted("timeline", "post", k, k);
+            }
+          })
+        )
+      );
+      const read = got.reduce((s, k) => s + k, 0);
+      const left = await balanceOf(holdId);
+      const doc = await Account.findById(holdId, "holds").lean();
+      ok(read <= 400 && read >= 395 && left >= 0 && left < toMicros(0.05), `twenty units at once share one $3 balance: ${read} posts read of the 400 it covers, ${left} µ$ left (never below zero)`);
+      ok(!(doc.holds || []).length, "…and every unit's hold is gone once it's charged");
+      // A request is cut to what's left, not sent whole: $0.015 left (= $0.01 of X's prices) asks for 1 profile of 1,000.
+      await Account.updateOne({ _id: holdId }, { $set: { balanceMicros: toMicros(0.015) } });
+      let asked = null;
+      await metered({ accountId: holdId, kind: "follows", label: "verify", billing: held }, async (meter) => {
+        asked = await meter.fit(1000, 0.01);
+      });
+      ok(asked === 1, `a page is sized to the balance left: 1,000 profiles asked, ${asked} sent`);
+      // Exactly the balance: $0.15 at ×1.5 is 20 posts (in floating point 150000.00000000003 µ$, which a ceiling once
+      // refused, so nothing was read).
+      await Account.updateOne({ _id: holdId }, { $set: { balanceMicros: toMicros(0.15) } });
+      await metered({ accountId: holdId, kind: "sync", label: "verify", billing: held }, async (meter) => {
+        asked = await meter.fit(100, 0.005);
+      });
+      ok(asked === 20, `exactly what the balance covers is allowed: $0.15 asks for 20 posts (${asked})`);
+    }
+    // THE LIVE DAY CAP: follow events ($0.01 each) delivered to one account count toward its UTC day; the one that
+    // reaches config.x.liveDayMaxUsd flags its subscriptions, and ensureSubs then wants none until the day turns.
+    {
+      const live = require("../services/live");
+      const LivePending = require("../models/LivePending");
+      const capId = ids.hold;
+      const max = config.x.liveDayMaxUsd;
+      const ev = { what: "live-follows", cls: "followEvent", resource: "follow" };
+      const now = new Date();
+      // Yesterday's count is not today's: the first event today starts the day again.
+      await Account.updateOne({ _id: capId }, { $set: { live: { day: "2000-01-01", dayUsd: 999 } } });
+      await live.notePending(capId, ev, `${tag}-ev-0`, now);
+      const fresh = await Account.findById(capId, "live").lean();
+      ok(fresh.live.day === now.toISOString().slice(0, 10) && Math.abs(fresh.live.dayUsd - 0.01) < 1e-9, "a new UTC day's first event starts its count");
+      await Account.updateOne({ _id: capId }, { $set: { "live.dayUsd": max - 0.015 } });
+      await live.notePending(capId, ev, `${tag}-ev-1`, now);
+      const before = await Account.findById(capId, "live").lean();
+      ok(!live.capReached(before, now) && !before.live.due, `half a cent under the $${max} day cap: Live stays`);
+      await live.notePending(capId, ev, `${tag}-ev-last`, now);
+      await live.notePending(capId, ev, `${tag}-ev-last`, now); // the same event delivered twice counts once
+      const after = await Account.findById(capId, "live").lean();
+      ok(live.capReached(after, now) && after.live.due === true && Math.abs(after.live.dayUsd - (max + 0.005)) < 1e-9, "the event that reaches it flags the subscriptions to go");
+      ok(!live.capReached(after, new Date(now.getTime() + 86400000)), "…and the next UTC day it's lifted");
+      await LivePending.deleteMany({ accountId: capId });
+    }
     // …and through the sync's door: a clean skip, the lock released. (Only the gated side reaches runSync here: a
     // funded run would read from X.)
     const { runSync } = require("../services/sync");
@@ -543,6 +608,23 @@ async function dbChecks() {
     const todayKey = new Date().toISOString().slice(0, 10);
     const today = (await billing.statementDays(ids.partner, { timeZone: "UTC", since: todayKey })).find((d) => d.day === todayKey);
     ok(today && today.added === 25e6 && today.charged === priceMicros(0.02, 1), "by day: charged and added");
+
+    // A CHARGEBACK: the disputed $25 comes off the balance once (Stripe redelivers), auto-refill goes off, and a dispute
+    // on a customer that isn't ours moves nothing.
+    {
+      await Account.updateOne({ _id: ids.partner }, { $set: { "autoRefill.enabled": true } });
+      const d = stubStripe({ "charges.retrieve": async (id) => ({ id, customer: id === "ch_ours" ? custId : "cus_someone_else" }) });
+      billing._setStripeForTests(d.client);
+      const at = await balanceOf(ids.partner);
+      const dispute = { id: `dp_${tag}`, charge: "ch_ours", amount: 2500 };
+      await Promise.all([1, 2].map(() => billing.handleEvent({ type: "charge.dispute.created", data: { object: dispute } })));
+      await billing.handleEvent({ type: "charge.dispute.created", data: { object: { id: `dp_${tag}_other`, charge: "ch_theirs", amount: 2500 } } });
+      const acct = await Account.findById(ids.partner, "balanceMicros autoRefill").lean();
+      ok(acct.balanceMicros === at - 25e6 && acct.autoRefill.enabled === false && acct.autoRefill.disabledReason === "dispute", "a dispute takes its $25 back once (delivered twice), and auto-refill goes off");
+      ok((await BalanceEntry.countDocuments({ accountId: ids.partner, ref: `dispute:${dispute.id}` })) === 1, "…one row for it; another customer's dispute touched nothing");
+      await Account.updateOne({ _id: ids.partner }, { $inc: { balanceMicros: 25e6 } }); // the checks below start where they did
+      billing._setStripeForTests(client);
+    }
 
     // ── auto-refill (stubbed Stripe): one refill per dip, the failure policy, the card door, both wake-ups ──
     let payResult = "paid";

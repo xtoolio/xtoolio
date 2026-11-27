@@ -78,7 +78,8 @@ const likestormRoutes = require("./routes/likestorm");
 const tagged = require("./services/tagged");
 const agentOAuth = require("./services/agentOAuth");
 const { connectionsFor } = require("./services/agentConnections");
-const { CIRCLE_PAGE, STORM_PAGE, START_PAGE, startView, headerBalance, isLiveFor, requireAccount, safeBack, withNotice, paysHere, fundsView, pricedChoices, tagsChoices, historyChoices, furtherChoices, FURTHER_STATE, resumeChoices, pageSwitch, keepLiveSwitch, pullView, navFor, navSums, modulesOf, countOf, readyOrRender, PULL_STATE, likeAllowance, conversationPage, xFailure, bulkLabel, namesOf, wantsJson, backTo, balanceText, refusedJson } = require("./routes/pages");
+const { CIRCLE_PAGE, STORM_PAGE, START_PAGE, startView, headerBalance, isLiveFor, requireAccount, safeBack, withNotice, paysHere, fundsView, pricedChoices, tagsChoices, historyChoices, furtherChoices, FURTHER_STATE, resumeChoices, pageSwitch, keepLiveSwitch, pullView, navFor, navSums, modulesOf, countOf, readyOrRender, PULL_STATE, likeAllowance, conversationPage, xFailure, bulkLabel, namesOf, wantsJson, backTo, balanceText, refusedJson, refuseBusy } = require("./routes/pages");
+const { inFlight, inFlightMiddleware } = require("./lib/inFlight");
 
 function createApp({ sessionStore }) {
   const app = express();
@@ -295,6 +296,21 @@ function createApp({ sessionStore }) {
       keyGenerator: (req) => ipKeyGenerator(req.ip),
     })
   );
+  // THE ACCOUNT LIMIT: signed in, a limit per ACCOUNT instead (its id is the server's own session lookup, never
+  // anything the client sends), generous for a person (searching as you type, the Inbox's views fetched as the pointer
+  // rests, presses), so one account's script can't tie up the web processes with page builds. Per process, like the
+  // other limiters. Before it, signed-in traffic had no limit at all.
+  app.use(
+    rateLimit({
+      windowMs: 60 * 1000,
+      limit: 300,
+      standardHeaders: true,
+      legacyHeaders: false,
+      skip: (req) => !req.account,
+      keyGenerator: (req) => `account:${req.account._id}`,
+      handler: refuseBusy,
+    })
+  );
 
   /* ============================================================
       CSRF — csrf-csrf, set up in lib/csrf.js: a signed double-submit token bound to the login session, in an
@@ -419,7 +435,8 @@ function createApp({ sessionStore }) {
 
   // A visitor's estimate from a real account costs the platform ~3 cents (services/estimator.js): at most 5 a day per
   // visitor (keyed on IP alone, like the main limiter), and a visitor past it still sees any handle already measured
-  // today. The limiter only marks the request; the page renders either way.
+  // today. The limiter only marks the request; the page renders either way. In front of EVERY page, not only "/": any
+  // signed-out page reaches the same estimate through readyOrRender's landing, and only "/" was limited.
   const estimateLimiter = rateLimit({
     windowMs: 24 * 3600 * 1000,
     limit: 5,
@@ -432,11 +449,12 @@ function createApp({ sessionStore }) {
       next();
     },
   });
+  app.use((req, res, next) => (req.method === "GET" ? estimateLimiter(req, res, next) : next()));
   app.get("/terms", (req, res) => res.render("terms", { legal }));
   app.get("/privacy", (req, res) => res.render("privacy", { legal }));
   app.use(auth.router);
 
-  app.use(inboxRoutes({ estimateLimiter }));
+  app.use(inboxRoutes());
 
   app.use(peopleRoutes());
 
@@ -686,6 +704,7 @@ function createApp({ sessionStore }) {
         } catch (err) {
           n = xFailure(err, `[unfollow] ${personId} for @${req.account.username} (bulk, ${done.length} done)`);
           if (n === "x-limit") n = "unfollow-limit";
+          else if (n === "out-of-balance" && done.length) n = "unfollowed-balance";
           break;
         }
       }
@@ -799,8 +818,14 @@ function createApp({ sessionStore }) {
   // wired after it, and such a stream stayed in the hub with its ping running).
   // `liveTabs`: every open one, so a restart can send each back to reconnect (app.closeLive, below).
   const liveTabs = new Set();
+  // At most LIVE_TABS_MAX open streams per account per process (lib/inFlight.js): each is a socket held open, and a
+  // script could open thousands. Far more tabs than a person keeps.
+  const LIVE_TABS_MAX = 20;
+  const liveSlots = inFlight(LIVE_TABS_MAX);
   app.get("/live", requireAccount, async (req, res) => {
     const account = req.account;
+    const release = liveSlots.take(String(account._id));
+    if (!release) return refuseBusy(req, res);
     let closed = false;
     let remove = () => {};
     let ping = null;
@@ -809,6 +834,7 @@ function createApp({ sessionStore }) {
       closed = true;
       clearInterval(ping);
       remove();
+      release();
       liveTabs.delete(res);
     });
     res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no" });
@@ -973,7 +999,9 @@ function createApp({ sessionStore }) {
   const mayReply = (req, res, next) =>
     /^\d+$/.test(String(req.params.id)) && active(req.account, "replying") ? next() : wantsJson(req) ? res.status(400).json({ ok: false, ...noticeFor("x-failed") }) : res.redirect(303, req.body ? backTo(req) : "/");
 
-  app.post("/posts/:id/reply", requireAccount, mayReply, receiveMedia, async (req, res) => {
+  // Two replies at once per account, at most (lib/inFlight.js): each may hold MAX_REPLY_BYTES in memory until X has it.
+  const oneUploadAtATime = inFlightMiddleware(2, refuseBusy);
+  app.post("/posts/:id/reply", requireAccount, mayReply, oneUploadAtATime, receiveMedia, async (req, res) => {
     const postId = String(req.params.id);
     const json = wantsJson(req);
     const text = String((req.body && req.body.text) || "").trim();
@@ -1364,8 +1392,13 @@ function createApp({ sessionStore }) {
       refill,
       // Stripe's receipt for each payment (Billing → Receipts, THE modal): top-ups and auto-refills.
       hasReceipts: !!funds && (await billing.receiptsFor(req.account._id, 1)).length > 0, // Balance's link to its page
-      // Agents (routes/agents.js): while the Inbox or People is on, the data an agent reads.
-      agents: isOn(req.account, "inbox") || isOn(req.account, "people") ? { url: agentOAuth.RESOURCE, list: await connectionsFor(req.account._id) } : null,
+      // Agents (routes/agents.js): while the Inbox or People is on (the data an agent reads), and ALWAYS while any
+      // connection exists: a token or an approved app stays live with both off (its tools answer "off"), so its
+      // Disconnect must stay reachable.
+      agents: await (async () => {
+        const list = await connectionsFor(req.account._id);
+        return isOn(req.account, "inbox") || isOn(req.account, "people") || list.length ? { url: agentOAuth.RESOURCE, list } : null;
+      })(),
       // THE INVITE LINK (services/invites.js): while sign-up is closed. null otherwise.
       invites: await invites.viewFor(req.account),
       // THE PAUSE's switch (routes/pause.js): on while reading runs; off since `pause.at` (by you, or the balance).

@@ -41,10 +41,10 @@ AgentTokenSchema.statics.mint = async function mint(accountId, name = "") {
 AgentTokenSchema.statics.accountFor = async function accountFor(token) {
   if (typeof token !== "string" || !SHAPE.test(token)) return null;
   const id = hashOf(token);
-  const row = await this.findById(id, "accountId name lastUsedAt").lean();
+  const row = await this.findById(id, "accountId name lastUsedAt createdAt").lean();
   if (!row) return null;
   if (!row.lastUsedAt || Date.now() - new Date(row.lastUsedAt).getTime() > USED_EVERY_MS) await this.updateOne({ _id: id }, { $set: { lastUsedAt: new Date() } });
-  return { accountId: row.accountId, tokenId: id, name: row.name || "" };
+  return { accountId: row.accountId, tokenId: id, name: row.name || "", since: row.createdAt };
 };
 
 AgentTokenSchema.statics.SHAPE = SHAPE;

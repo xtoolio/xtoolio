@@ -34,12 +34,12 @@ const isSiteAccount = (user) => !!(config.siteX && user && String(user.username 
 // Does a grant's scope string (X's, kept on Account.tokens.scope) include `scope`?
 const hasScope = (scopes, scope) => String(scopes || "").split(/\s+/).includes(scope);
 
-// Sign-in may create an account only for the allowlist (config.signup: X user ids, or usernames); an existing account
-// always may. An id is the safe entry: a username changes hands on X, so whoever renames their own account to an
-// allowlisted handle that hasn't signed up yet would get in.
-function maySignIn(existing, username, userId) {
+// Sign-in may create an account only for the allowlist (config.signup: X user ids); an existing account always may.
+// By id alone: a username changes hands on X, so whoever renamed their own account to an allowlisted handle that
+// hadn't signed up yet would get in (handles in ALLOWED_USERNAMES are ignored, config/index.js).
+function maySignIn(existing, userId) {
   if (existing || config.signup.anyone) return true;
-  return config.signup.ids.has(String(userId || "")) || config.signup.usernames.has(String(username).toLowerCase());
+  return config.signup.ids.has(String(userId || ""));
 }
 
 async function saveSignIn(user, tokens) {

@@ -452,8 +452,9 @@ function railOfCard(row) {
 }
 
 // A card's subject, one plain line (post view → { text, author }): the rail's Posts view names a card by it. Pure.
+const ABOUT_CHARS = 90; // a card's `about` line (the agent's inbox tool says it)
 function aboutOf(view, meId) {
-  return { id: view.id, text: plainLine(view, 90) || "A post", author: view.author, yours: view.author && view.author.id === meId };
+  return { id: view.id, text: plainLine(view, ABOUT_CHARS) || "A post", author: view.author, yours: view.author && view.author.id === meId };
 }
 
 // THE HEAD'S BREAKDOWN (the red count alone looked daunting; it is likes and replies, so the head splits
@@ -566,4 +567,4 @@ const listing = createListing({
   },
 });
 
-module.exports = { inboxRows, threadAbove, THREAD_ABOVE_MAX, draftOf, inboxStart, incomingCards, owedCount, standingOf, splitReopened, railOf, railOfPosts, railOfCard, previewOf, owedTotals, capCard, likeTargets, owedModel, followTargets, CARD_SHOWS, focusOn, listing };
+module.exports = { ABOUT_CHARS, inboxRows, threadAbove, THREAD_ABOVE_MAX, draftOf, inboxStart, incomingCards, owedCount, standingOf, splitReopened, railOf, railOfPosts, railOfCard, previewOf, owedTotals, capCard, likeTargets, owedModel, followTargets, CARD_SHOWS, focusOn, listing };

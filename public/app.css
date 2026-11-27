@@ -1445,7 +1445,9 @@ a.like-words, a.like-words:hover { color: inherit; text-decoration: none; } /* t
 .repost-btn::-webkit-details-marker { display: none; }
 .repost-btn .ico { width: 18px; height: 18px; }
 .repost-btn:hover, .repost-menu[open] > .repost-btn { color: var(--accent); background: var(--accent-soft); }
-.repost-btn.on { color: var(--accent); }
+/* Reposted: the liked ♥'s soft pill, not the accent alone (a waiting reply's whole foot is the accent, and a repost
+   pressed there changed nothing you could see). */
+.repost-btn.on { color: var(--accent); background: var(--accent-soft); }
 .repost-panel { position: absolute; left: 0; top: calc(100% + 4px); z-index: 40; display: grid; min-width: 168px; padding: 6px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: var(--shadow); }
 .repost-form { display: block; margin: 0; }
 .repost-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.3; color: var(--ink); text-align: left; white-space: nowrap; background: none; border: 0; border-radius: var(--btn-r); cursor: pointer; }
@@ -2561,6 +2563,7 @@ input.field:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 
 .agent-secret { display: block; margin: 8px 0 0; padding: 8px 10px; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all; }
 pre.agent-secret { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; }
 .connect-place { color: var(--muted); font-weight: 500; } /* "(claude.ai)": where it sends you back, beside its own name */
+.connect-warn { margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: var(--alert); } /* an app xtoolio doesn't know */
 .connect-list { margin: 6px 0 14px; padding-left: 20px; color: var(--ink); }
 .connect-list li { margin: 2px 0; }
 .connect-answer { display: flex; gap: 10px; align-items: center; margin: 18px 0 0; }

@@ -60,8 +60,15 @@ function ceilingOf(quote, room, bulk = false) {
 // a failed write stops the unit rather than letting it read on unrecorded. It keeps the unit's running cost
 // (`spentUsd`, the same sum as UsageEntry.estUsd) and its ceiling (`ceilingUsd`): lib/x.js sends no read once the
 // cost has reached it, so a run stops where the balance (or the quote) runs out, cleanly, like a count cap.
-function meterFor(entryId, accountId = null, { quote = null, room = null } = {}) {
+//
+// THE HOLDS (Account.holds, services/balance.js hold): with `billing` and a `room` (a billed account, not the owner),
+// `fit` sets aside, before each request, what this unit has spent plus that request's most, at the rate it's charged,
+// in one write every unit running at once goes through. So the units together never spend past the balance, however
+// many start at once, and a request is cut to what's left (`fit`'s answer) instead of overshooting it.
+function meterFor(entryId, accountId = null, { quote = null, room = null, billing = null } = {}) {
   const start = ceilingOf(quote, room);
+  const holding = !!(billing && accountId && room && room.rate);
+  const u = String(entryId);
   return {
     entryId,
     spentUsd: 0,
@@ -69,6 +76,22 @@ function meterFor(entryId, accountId = null, { quote = null, room = null } = {})
     // Has this unit spent what it may? (lib/x.js asks before every read.)
     atCeiling() {
       return this.ceilingUsd != null && this.spentUsd >= this.ceilingUsd;
+    },
+    // How many of `n` things at `unitUsd` each (X's price) the next request may ask for: at most what's left of the
+    // quote, and, holding, what the balance left beside every other running unit covers, held now. Fewer than the
+    // caller can use → it stops cleanly (lib/x.js: ReadCapReached `ceiling`). → a count, 0..n
+    async fit(n, unitUsd) {
+      if (!(n > 0) || !(unitUsd > 0)) return n;
+      const eps = 1e-9;
+      let can = n;
+      if (quote != null) can = Math.min(can, Math.floor((quote - this.spentUsd) / unitUsd + eps));
+      if (!holding || can <= 0) return Math.max(0, can);
+      const rate = this.isBulk ? room.rate.bulk : room.rate.full;
+      const want = (k) => (this.spentUsd + k * unitUsd) * rate * 1e6;
+      if (await billing.hold(accountId, u, want(can))) return can;
+      const free = await billing.freeFor(accountId, u); // someone else holds the rest: take what's left
+      can = Math.min(can, Math.floor((free / 1e6 / rate - this.spentUsd) / unitUsd + eps));
+      return can > 0 && (await billing.hold(accountId, u, want(can))) ? can : 0;
     },
     // The account's rate-limit windows, shared across runs and processes (lib/x.js paces on them). A sign-in doesn't
     // know its account yet: its client falls back to memory.
@@ -178,8 +201,8 @@ async function metered({ accountId = null, kind, label, billing = null, visitor 
     billing.wake(accountId); // auto-refill, if it's on: nothing else would wake it for an account that isn't spending
     throw new OutOfBalance();
   }
-  // THE CEILING (ceilingOf): the quote, and what the balance covers now. Units running at once each see the whole
-  // balance, so a press made during a sync can take it a press's worth past zero; a sync can't (one per account).
+  // THE CEILING (ceilingOf): the quote, and what the balance covers now, less what units running beside it hold.
+  // Each request then holds its own most (meter.fit, THE HOLDS), so units started together share one balance.
   const quote = Number.isFinite(ceilingUsd) ? ceilingUsd : null;
   const room = billed ? await billing.ceilingFor(accountId) : null;
   const ceiling = ceilingOf(quote, room);
@@ -189,7 +212,7 @@ async function metered({ accountId = null, kind, label, billing = null, visitor 
   let status = "ok";
   let error;
   try {
-    return await fn(meterFor(entry._id, accountId, { quote, room }));
+    return await fn(meterFor(entry._id, accountId, { quote, room, billing: billed ? billing : null }));
   } catch (e) {
     status = "failed";
     error = String(e.message || e).slice(0, 300);
@@ -197,7 +220,12 @@ async function metered({ accountId = null, kind, label, billing = null, visitor 
   } finally {
     stopBeat();
     await close(entry._id, { status, error, dropEmpty });
-    if (billed) await billing.chargeUnit(entry._id).catch((e) => console.error(`[usage] charging ${entry._id} failed (the next unit retries): ${e.message}`));
+    if (billed) {
+      await billing.chargeUnit(entry._id).catch((e) => console.error(`[usage] charging ${entry._id} failed (the next unit retries): ${e.message}`));
+      // A unit with nothing left to charge lets go of its hold (one still due keeps it until the sweep charges it; one
+      // deleted as empty, dropEmpty, had nothing to charge).
+      if (!(await UsageEntry.exists({ _id: entry._id, chargeDue: true }))) await billing.release(accountId, entry._id).catch(() => {});
+    }
   }
 }
 

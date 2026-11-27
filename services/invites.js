@@ -15,12 +15,23 @@ const crypto = require("crypto");
 const config = require("../config");
 const InviteCode = require("../models/InviteCode");
 const Account = require("../models/Account");
+const BalanceEntry = require("../models/BalanceEntry");
 
 const CODE = /^[A-Za-z0-9_-]{12}$/;
 const newCode = () => crypto.randomBytes(9).toString("base64url"); // 12 characters, 72 random bits
 
 const enabled = () => !config.signup.anyone && config.invites.perAccount > 0;
 const linkOf = (code) => `${config.appOrigin}/i/${code}`;
+
+// WHO MAY INVITE, where the site charges: an account that has PAID (a top-up or an auto-refill: real money, never a
+// credit given), an admin, or the owner. Until this every account had a link, those who came in through one too, so
+// one person with five spare X accounts let in 25, then 125, past the waitlist with no admin and no money. With billing
+// off (a copy that charges nobody) everyone may, as before. Checked when the link is shown, opened and used.
+async function mayInvite(accountId) {
+  const id = String(accountId);
+  if (!config.billing.enabled || config.admins.has(id) || id === config.x.ownerId) return true;
+  return !!(await BalanceEntry.exists({ accountId: id, kind: { $in: ["topup", "auto-refill"] } }));
+}
 
 // This account's code, made the first time it's asked for (two at once: the unique accountId keeps one). → the doc
 async function codeFor(accountId) {
@@ -38,8 +49,9 @@ async function codeFor(accountId) {
 // Settings → Invites: the link, how many places are left, and who came in through it (their faces). null: invites off.
 async function viewFor(account) {
   if (!enabled()) return null;
-  const doc = await codeFor(account._id);
   const max = config.invites.perAccount;
+  if (!(await mayInvite(account._id))) return { locked: true, max };
+  const doc = await codeFor(account._id);
   const used = doc.used || [];
   const who = new Map((await Account.find({ _id: { $in: used.map((u) => u.id) } }, "username name image").lean()).map((a) => [a._id, a]));
   return {
@@ -61,13 +73,16 @@ async function pageFor(code) {
   if (!doc) return null;
   const from = await Account.findById(doc.accountId, "username name image").lean();
   if (!from) return null;
-  return { code: doc._id, from: { id: from._id, username: from.username, profile: { name: from.name, image: from.image } }, open: (doc.used || []).length < config.invites.perAccount };
+  const open = (doc.used || []).length < config.invites.perAccount && (await mayInvite(doc.accountId));
+  return { code: doc._id, from: { id: from._id, username: from.username, profile: { name: from.name, image: from.image } }, open };
 }
 
 // Take one place on `code` for X user `user` (the sign-in's /users/me). Atomic: never past the limit, never twice for the
 // same person. → the inviter's account id, or null (no such link, full, or invites off)
 async function redeem(code, user) {
   if (!enabled() || !CODE.test(String(code || ""))) return null;
+  const link = await InviteCode.findById(String(code), "accountId").lean();
+  if (!link || !(await mayInvite(link.accountId))) return null; // its owner may not invite (hasn't paid): no place taken
   const doc = await InviteCode.findOneAndUpdate(
     { _id: String(code), accountId: { $ne: String(user.id) }, "used.id": { $ne: String(user.id) }, $expr: { $lt: [{ $size: "$used" }, config.invites.perAccount] } },
     { $push: { used: { id: String(user.id), username: user.username, at: new Date() } } },
@@ -76,4 +91,4 @@ async function redeem(code, user) {
   return doc ? doc.accountId : null;
 }
 
-module.exports = { CODE, enabled, codeFor, viewFor, pageFor, redeem };
+module.exports = { CODE, enabled, mayInvite, codeFor, viewFor, pageFor, redeem };

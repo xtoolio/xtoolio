@@ -14,11 +14,13 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const multer = require("multer");
+const { withoutUnsafe } = require("../lib/cleanText");
 const Feedback = require("../models/Feedback");
 const FeedbackShot = require("../models/FeedbackShot");
 const { sniff, MIME } = require("../lib/media");
 const { noticeFor } = require("../lib/notices");
-const { requireAccount, safeBack, withNotice, wantsJson } = require("./pages");
+const { requireAccount, safeBack, withNotice, wantsJson, refuseBusy } = require("./pages");
+const { inFlightMiddleware } = require("../lib/inFlight");
 
 const { TEXT_MAX, PAGE_MAX } = Feedback;
 const { SHOTS_MAX, SHOT_BYTES, SHOTS_PER_DAY, SHOT_TYPES } = FeedbackShot;
@@ -42,11 +44,20 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: SHOT_BYTES, files: SHOTS_MAX, fields: 4, fieldSize: 16 * 1024, parts: SHOTS_MAX + 4 },
 }).array("shots", SHOTS_MAX);
-const receiveShots = (req, res, next) =>
+// An account past the day's feedback is refused BEFORE its pictures are held (the full check, pictures counted, is in
+// the route): up to SHOTS_MAX × SHOT_BYTES in memory per request otherwise, for a send that would be refused anyway.
+const receiveShots = async (req, res, next) => {
+  if ((await Feedback.countDocuments({ accountId: req.account._id, at: { $gte: new Date(Date.now() - 864e5) } })) >= PER_DAY) {
+    req.shotsRefused = "feedback-limit";
+    return next();
+  }
   upload(req, res, (err) => {
     if (err) req.shotsRefused = err.code === "LIMIT_FILE_SIZE" ? "feedback-shot-big" : err.code === "LIMIT_FILE_COUNT" || err.code === "LIMIT_UNEXPECTED_FILE" ? "feedback-shot-many" : "feedback-shot-type";
     next();
   });
+};
+// One feedback send at a time per account (lib/inFlight.js): each may hold its pictures in memory while it's checked.
+const oneAtATime = inFlightMiddleware(1, refuseBusy);
 
 // The uploaded files checked: each an image by its own first bytes (lib/media.js sniff; never SVG, never what its name
 // or the browser says). → { shots: [{ mime, data }] } | { refuse: notice key }. Pure.
@@ -70,9 +81,7 @@ function checkShots(files) {
 //   trimmed. Length is counted as the browser's maxlength counts it (UTF-16 units), after cleaning.
 function cleanText(raw) {
   if (typeof raw !== "string") return { refuse: "feedback-empty" };
-  const text = raw
-    .replace(/\r\n?/g, "\n")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F‪-‮⁦-⁩]/g, "")
+  const text = withoutUnsafe(raw, { keepLines: true })
     .replace(/\n{4,}/g, "\n\n\n")
     .trim();
   if (!text) return { refuse: "feedback-empty" };
@@ -83,7 +92,7 @@ function cleanText(raw) {
 module.exports = function feedbackRoutes() {
   const router = express.Router();
 
-  router.post("/feedback", requireAccount, receiveShots, async (req, res) => {
+  router.post("/feedback", requireAccount, oneAtATime, receiveShots, async (req, res) => {
     const body = req.body || {};
     const back = safeBack(body.page, "/");
     const page = back.length <= PAGE_MAX ? back : "/";

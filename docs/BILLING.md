@@ -14,7 +14,9 @@ A self-hosted copy normally leaves billing off: you pay X yourself, and the app 
    `stripe listen --forward-to 127.0.0.1:3100/stripe/webhook` for the local webhook secret, and one real test-mode
    top-up, card save and refill end to end.
 2. **Deploy** (HTTPS `APP_ORIGIN`): the live webhook endpoint `APP_ORIGIN/stripe/webhook` with events
-   `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `invoice.paid`; live keys.
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `invoice.paid`, `charge.dispute.created`
+   (a chargeback takes the disputed amount off the balance and switches auto-refill off: billing.js handleDispute; a
+   dispute won is credited back by hand); live keys.
 3. **`CONTACT_X`**: the X handle people DM about their account (the Terms and Privacy say "send a DM to @handle on X";
    without it, "reach us on X"), and a read of both pages.
 4. **`METERED_BILLING_ENABLED=true`.** Existing non-owner accounts start at $0, so they pause until they top up:

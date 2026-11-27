@@ -10,7 +10,9 @@
 "use strict";
 
 const crypto = require("crypto");
+const express = require("express");
 const config = require("../config");
+const { withoutUnsafe } = require("../lib/cleanText");
 const OAuthClient = require("../models/OAuthClient");
 const OAuthRequest = require("../models/OAuthRequest");
 const AgentGrant = require("../models/AgentGrant");
@@ -55,6 +57,45 @@ function placeOf(redirectUri) {
 }
 const allowedRedirects = (uris) => Array.isArray(uris) && uris.length > 0 && uris.every((u) => !!placeOf(u));
 
+// THE APPS WE KNOW, by where they send you back: their own web home (the host or one under it), an app on this
+// computer, or a listed app's scheme. Anyone else may still connect (registration is open), but the approve page says
+// it's an app xtoolio doesn't know and leads with WHERE it sends you back, never its self-chosen name: "Claude" with a
+// home at claude.ai.evil.example read as Claude (an outside read of the code). An honest miss: an app not here is
+// shown as unknown, never refused. Adding one is a line.
+const KNOWN_HOMES = ["claude.ai", "chatgpt.com", "chat.openai.com"];
+const knownPlace = (redirectUri) => {
+  try {
+    const u = new URL(redirectUri);
+    if (u.protocol !== "https:") return !!placeOf(redirectUri); // http on this computer, or a listed app's scheme
+    return KNOWN_HOMES.some((h) => u.hostname === h || u.hostname.endsWith(`.${h}`));
+  } catch {
+    return false;
+  }
+};
+
+// /authorize's own check, BEFORE the SDK's handler: the SDK sends any parameter error after the client and its
+// redirect address (a bad response_type, no PKCE, another resource) TO that address, so a registration anyone can make
+// turned a clean xtoolio.com link into a bounce to any site (an open redirect). Those errors are refused here, on this
+// site, instead (RFC 9700 §4.11.2); a real app never sends them. What reaches the SDK is a request it would accept.
+const PARAM_MAX = { state: 1024, scope: 200, resource: 512, code_challenge: 128, redirect_uri: 512, client_id: 128 };
+function authorizeGuard(req, res, next) {
+  const p = (req.method === "POST" ? req.body : req.query) || {};
+  const str = (k) => p[k] === undefined || typeof p[k] === "string";
+  // Each kept on the pending request (models/OAuthRequest.js) for its ten minutes, so each has a bound: a real app's
+  // state is a few dozen characters, and ~100 kB of it per request was a cheap way to fill the database.
+  const long = Object.entries(PARAM_MAX).some(([k, max]) => typeof p[k] === "string" && p[k].length > max);
+  const why =
+    p.response_type !== "code" ? ["invalid_request", "response_type must be code"]
+    : typeof p.code_challenge !== "string" || !p.code_challenge ? ["invalid_request", "code_challenge (PKCE) is required"]
+    : p.code_challenge_method !== "S256" ? ["invalid_request", "code_challenge_method must be S256"]
+    : !str("state") || !str("scope") || !str("resource") ? ["invalid_request", "state, scope and resource are single values"]
+    : long ? ["invalid_request", `too long: ${Object.entries(PARAM_MAX).map(([k, max]) => `${k} at most ${max}`).join(", ")}`]
+    : p.resource !== undefined && !sameResource(p.resource) ? ["invalid_target", `This server's resource is ${RESOURCE}`]
+    : null;
+  if (!why) return next();
+  res.set("Cache-Control", "no-store").status(400).json({ error: why[0], error_description: why[1] });
+}
+
 function checkRedirects(uris) {
   for (const uri of uris || []) {
     if (!placeOf(uri)) throw new InvalidClientMetadataError(`redirect_uri must be https, http on this computer (localhost, 127.0.0.1), or ${[...APP_SCHEMES].map((s) => `${s}//`).join(", ")}: ${uri}`);
@@ -64,16 +105,19 @@ function checkRedirects(uris) {
 // An app's own name as the approve page shows it: control characters and bidi overrides dropped (they can make the
 // heading read in another order than it's stored), one line, at most NAME_MAX.
 const NAME_MAX = 80;
-const cleanName = (s) => String(s || "").replace(/[\u0000-\u001F\u007F-\u009F‎‏‪-‮⁦-⁩]/g, "").replace(/\s+/g, " ").trim().slice(0, NAME_MAX);
+const cleanName = (s) => withoutUnsafe(s).replace(/\s+/g, " ").trim().slice(0, NAME_MAX);
 
 // What a registration may hold. /register is open to anyone (that's dynamic registration), so a row keeps ONLY what the
 // SDK and the approve page read, in bounded sizes, and an unapproved one lapses in a day (models/OAuthClient.js): the
 // SDK accepts any other metadata (contacts, jwks, software_statement...) up to its 100 kB body, which would otherwise
-// be a cheap way to fill the database. `UNAPPROVED_MAX` bounds the rows waiting for an approval across everyone.
+// be a cheap way to fill the database. `UNAPPROVED_MAX` bounds the rows waiting for an approval across everyone: at it,
+// the OLDEST waiting one is dropped to make room (refusing instead let anyone with enough addresses fill the line and
+// keep every new app from connecting for a day; a real app registers right before the person approves it).
 const KEPT = ["client_id", "client_secret", "client_id_issued_at", "client_secret_expires_at", "redirect_uris", "token_endpoint_auth_method", "grant_types", "response_types", "scope"];
 const REDIRECTS_MAX = 5;
 const URI_MAX = 512;
 const UNAPPROVED_MAX = 5000;
+const FLOWS = { grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], token_endpoint_auth_method: ["none", "client_secret_post", "client_secret_basic"] };
 
 const clientsStore = {
   // A registration whose addresses the rule no longer allows is no client at all, at every step the SDK asks (authorize,
@@ -89,10 +133,17 @@ const clientsStore = {
     }
     checkRedirects(uris);
     if ((await OAuthClient.countDocuments({ expireAt: { $exists: true } })) >= UNAPPROVED_MAX) {
-      throw new InvalidClientMetadataError("Too many apps are waiting to be approved; try again later");
+      await OAuthClient.findOneAndDelete({ expireAt: { $exists: true } }, { sort: { expireAt: 1 } }); // the oldest waiting
     }
     const kept = Object.fromEntries(KEPT.filter((k) => info[k] !== undefined).map((k) => [k, info[k]]));
     if (typeof kept.scope === "string") kept.scope = kept.scope.slice(0, 200);
+    // The flows this server has are the only values these keep (the SDK takes any strings, any number of them: ~100 kB
+    // of grant_types was a cheap way to fill a row). Kept, not refused: an app that lists a flow we don't have still
+    // connects with the ones we do.
+    for (const [field, allowed] of Object.entries(FLOWS)) {
+      if (Array.isArray(kept[field])) kept[field] = allowed.filter((x) => kept[field].includes(x));
+      else if (kept[field] !== undefined && !allowed.includes(kept[field])) delete kept[field];
+    }
     const name = cleanName(info.client_name);
     if (name) kept.client_name = name;
     await OAuthClient.create({ _id: kept.client_id, info: kept });
@@ -102,15 +153,9 @@ const clientsStore = {
 
 const provider = {
   clientsStore,
-  // The app sent the person here: keep what it asked and show them the approve page. Nothing is decided yet.
+  // The app sent the person here: keep what it asked and show them the approve page. Nothing is decided yet. (Another
+  // resource never gets here: authorizeGuard refused it on this site.)
   async authorize(client, params, res) {
-    if (params.resource && !sameResource(params.resource.href)) {
-      const back = new URL(params.redirectUri);
-      back.searchParams.set("error", "invalid_target");
-      back.searchParams.set("error_description", `This server's resource is ${RESOURCE}`);
-      if (params.state) back.searchParams.set("state", params.state);
-      return res.redirect(back.href);
-    }
     const id = crypto.randomBytes(24).toString("base64url");
     await OAuthRequest.create({ _id: id, clientId: client.client_id, redirectUri: params.redirectUri, state: params.state, codeChallenge: params.codeChallenge, resource: params.resource ? params.resource.href : undefined, scopes: params.scopes || [] });
     res.redirect(`${APPROVE_PAGE}?r=${id}`);
@@ -126,7 +171,11 @@ const provider = {
     if (!row) throw new InvalidGrantError("Invalid or expired authorization code");
     if (redirectUri && redirectUri !== row.redirectUri) throw new InvalidGrantError("redirect_uri doesn't match the one the code was issued to");
     await OAuthClient.updateOne({ _id: client.client_id }, { $unset: { expireAt: 1 } }); // approved once: kept
-    return AgentGrant.grant({ accountId: row.accountId, clientId: client.client_id, name: client.client_name, redirectHost: placeOf(row.redirectUri), resource: row.resource || RESOURCE });
+    // An app we don't know (KNOWN_HOMES) carries its home in its name, so its drafts and its Settings row say where it
+    // lives, not only what it calls itself.
+    const place = placeOf(row.redirectUri);
+    const name = knownPlace(row.redirectUri) ? client.client_name : `${cleanName(client.client_name) || "An app"} (${place})`.slice(0, NAME_MAX);
+    return AgentGrant.grant({ accountId: row.accountId, clientId: client.client_id, name, redirectHost: place, resource: row.resource || RESOURCE });
   },
   async exchangeRefreshToken(client, refreshToken) {
     const tokens = await AgentGrant.refresh(client.client_id, refreshToken);
@@ -150,7 +199,7 @@ async function pendingView(id) {
   if (!row) return null;
   const client = await clientsStore.getClient(row.clientId);
   if (!client) return null;
-  return { id, name: cleanName(client.client_name) || "An app", place: placeOf(row.redirectUri) };
+  return { id, name: cleanName(client.client_name) || "An app", place: placeOf(row.redirectUri), known: knownPlace(row.redirectUri) };
 }
 // The person said yes (signed in as `accountId`): a one-time code, and where the app gets it. → URL | null
 async function approve(id, accountId) {
@@ -175,8 +224,12 @@ async function deny(id) {
 // The SDK's endpoints, mounted at the site's root BEFORE the cookie, session and CSRF layers (web.js): apps call them
 // without a browser session. Registrations never expire their secret (an app would lose its connection after the
 // SDK's default 30 days).
+// /authorize passes authorizeGuard first.
 const router = () =>
-  mcpAuthRouter({ provider, issuerUrl: new URL(config.appOrigin), resourceServerUrl: new URL(RESOURCE), resourceName: config.brandName, clientRegistrationOptions: { clientSecretExpirySeconds: 0 } });
+  express
+    .Router()
+    .all("/authorize", express.urlencoded({ extended: false, limit: "8kb" }), authorizeGuard)
+    .use(mcpAuthRouter({ provider, issuerUrl: new URL(config.appOrigin), resourceServerUrl: new URL(RESOURCE), resourceName: config.brandName, clientRegistrationOptions: { clientSecretExpirySeconds: 0 } }));
 
 // What a 401 from /mcp points at, so an app finds the sign-in by itself (RFC 9728).
 const RESOURCE_METADATA = getOAuthProtectedResourceMetadataUrl(new URL(RESOURCE));

@@ -124,7 +124,8 @@ function leaderboard(posts, meId, profiles = new Map(), { likes = NO_LIKES, foll
 }
 
 // One line of plain text for a post, for a table cell: its display segments flattened, whitespace collapsed.
-function plainLine(item, max = 140) {
+const PLAIN_MAX = 140; // a table cell's line, by default (a person's conversations' `about`: the agent's people tool says it)
+function plainLine(item, max = PLAIN_MAX) {
   if (!item || item.gone) return "";
   const s = item.segments.map((seg) => (seg.media ? "[media]" : seg.text)).join("").replace(/\s+/g, " ").trim();
   if (!s && item.media.length) return "[media]"; // only pictures: say so rather than nothing
@@ -399,4 +400,4 @@ function threads(posts, meId, personId, profiles = new Map(), { likers = new Map
     .sort((a, b) => b.lastAt - a.lastAt);
 }
 
-module.exports = { POST_FIELDS, EXCHANGE_FIELDS, likeLine, likeFaceIds, displayNameOf, exchangeWith, leaderboard, threads, usernameMap, postView, addressees, replyingView, refOf, chatOrder, runsOf, foldChat, plainLine };
+module.exports = { POST_FIELDS, EXCHANGE_FIELDS, likeLine, likeFaceIds, displayNameOf, exchangeWith, leaderboard, threads, usernameMap, postView, addressees, replyingView, refOf, chatOrder, runsOf, foldChat, plainLine, PLAIN_MAX };

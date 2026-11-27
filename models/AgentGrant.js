@@ -28,6 +28,7 @@ const AgentGrantSchema = new mongoose.Schema(
     refreshExpiresAt: { type: Date, required: true },
     resource: { type: String },
     createdAt: { type: Date, default: Date.now },
+    approvedAt: { type: Date }, // the latest approval (routes/mcp.js refuses a grant approved before its account was made)
     lastUsedAt: { type: Date },
   },
   { versionKey: false }
@@ -54,7 +55,7 @@ function freshPair() {
 // Approved: this account's connection to this app, new tokens (an earlier approval's stop working).
 AgentGrantSchema.statics.grant = async function grant({ accountId, clientId, name, redirectHost, resource }) {
   const { tokens, fields } = freshPair();
-  await this.findOneAndUpdate({ accountId: String(accountId), clientId }, { $set: { ...fields, name: String(name || "").slice(0, 80), redirectHost, resource }, $setOnInsert: { createdAt: new Date() } }, { upsert: true });
+  await this.findOneAndUpdate({ accountId: String(accountId), clientId }, { $set: { ...fields, name: String(name || "").slice(0, 80), redirectHost, resource, approvedAt: new Date() }, $setOnInsert: { createdAt: new Date() } }, { upsert: true });
   return tokens;
 };
 
@@ -66,14 +67,14 @@ AgentGrantSchema.statics.refresh = async function refresh(clientId, token) {
   return row ? tokens : null;
 };
 
-// An access token → { accountId, grantId, name, clientId, expiresAt } or null (wrong shape, unknown, expired,
-// disconnected). Marks it used at most once a minute.
+// An access token → { accountId, grantId, name, clientId, expiresAt, since (when it was approved) } or null (wrong
+// shape, unknown, expired, disconnected). Marks it used at most once a minute.
 AgentGrantSchema.statics.accountFor = async function accountFor(token) {
   if (typeof token !== "string" || !SHAPE.test(token) || !token.startsWith(ACCESS)) return null;
-  const row = await this.findOne({ accessHash: hashOf(token), accessExpiresAt: { $gt: new Date() } }, "accountId clientId name lastUsedAt accessExpiresAt").lean();
+  const row = await this.findOne({ accessHash: hashOf(token), accessExpiresAt: { $gt: new Date() } }, "accountId clientId name lastUsedAt accessExpiresAt approvedAt createdAt").lean();
   if (!row) return null;
   if (!row.lastUsedAt || Date.now() - new Date(row.lastUsedAt).getTime() > USED_EVERY_MS) await this.updateOne({ _id: row._id }, { $set: { lastUsedAt: new Date() } });
-  return { accountId: row.accountId, grantId: String(row._id), name: row.name, clientId: row.clientId, expiresAt: row.accessExpiresAt };
+  return { accountId: row.accountId, grantId: String(row._id), name: row.name, clientId: row.clientId, expiresAt: row.accessExpiresAt, since: row.approvedAt || row.createdAt };
 };
 
 // The app gives a token back (OAuth's /revoke): its whole connection ends.

@@ -18,7 +18,8 @@
 //            month's threshold. THE CEILING (UsageEntry.ceilingUsd): no unit is charged on more X cost than the quote
 //            shown before it ran, nor than its account's balance covered when it started (ceilingFor; lib/x.js stops
 //            reading there too), so no unit takes a balance below zero (a history read never goes past the
-//            funded balance). The full rate runs per account per calendar month (UTC) until the markup reaches a
+//            funded balance). THE HOLDS (Account.holds) make that true of units running AT ONCE: each request
+//            first sets aside its most beside every other running unit's, in one conditional write (hold). The full rate runs per account per calendar month (UTC) until the markup reaches a
 //            threshold (markupCapMicros, MARKUP_CAP_USD, $50), then the rate drops (markupAfterRate,
 //            MARKUP_AFTER_CAP_PCT, 15%) until the month turns (a flat cap couldn't cover card processing on
 //            big users). Account.markupMonth / markupMicros count the month's markup, moved
@@ -202,8 +203,39 @@ function createBalance({ enabled = false, ownerId = null, multiplier, markupCapM
         await Account.updateOne({ _id: e.accountId, "pause.at": { $exists: false } }, { $set: { pause: { at: new Date(), why: "balance" } } });
       }
     }
-    if (settled) await UsageEntry.updateOne({ _id: e._id }, { $unset: { chargeDue: 1 } });
+    if (settled) {
+      await UsageEntry.updateOne({ _id: e._id }, { $unset: { chargeDue: 1 } });
+      if (e.accountId) await release(e.accountId, ref); // its hold is charged now (or never will be)
+    }
     return moved;
+  }
+
+  // THE HOLDS (Account.holds; see top of models/Account.js). `others` = every hold on the account but unit `u`'s.
+  const othersOf = (u) => ({ $filter: { input: { $ifNull: ["$holds", []] }, cond: { $ne: ["$$this.u", u] } } });
+  const heldBy = (list) => ({ $sum: { $map: { input: list, in: "$$this.m" } } });
+  const freeExpr = (u) => ({ $subtract: [{ $subtract: [{ $ifNull: ["$balanceMicros", 0] }, floorMicros] }, heldBy(othersOf(u))] });
+
+  // Set unit `u`'s hold on this account to `totalMicros`, only if the balance above the floor, less every OTHER unit's
+  // hold, covers it: ONE atomic write, so units running at once can't together set aside more than there is. Lowering
+  // it always succeeds. → whether it's held.
+  async function hold(accountId, u, totalMicros) {
+    // Rounded, not ceiled: dollars × the rate in floating point lands a hair over the exact figure (20 posts × $0.005 ×
+    // 1.5 is 150000.00000000003 µ$), and a ceiling made exactly what the balance covers one µ$ too many.
+    const m = Math.max(0, Math.round(totalMicros));
+    const r = await Account.collection.updateOne(
+      { _id: accountId, $expr: { $gte: [freeExpr(String(u)), m] } },
+      [{ $set: { holds: { $concatArrays: [othersOf(String(u)), [{ u: String(u), m }]] } } }]
+    );
+    return r.matchedCount === 1;
+  }
+
+  // Unit `u`'s hold is gone (charged, or it cost nothing).
+  const release = (accountId, u) => Account.collection.updateOne({ _id: accountId, "holds.u": String(u) }, { $pull: { holds: { u: String(u) } } });
+
+  // What unit `u` may still set aside: the balance above the floor less every other unit's hold, in micro-dollars.
+  async function freeFor(accountId, u) {
+    const [doc] = await Account.aggregate([{ $match: { _id: accountId } }, { $project: { free: freeExpr(String(u)) } }]);
+    return doc ? Math.max(0, doc.free) : 0;
   }
 
   // Charge every closed unit still due (a process that died between a close and its charge; a dead unit
@@ -240,12 +272,16 @@ function createBalance({ enabled = false, ownerId = null, multiplier, markupCapM
   // history: meter.bulkRead). X's cost, in dollars; fresh from the database, like the gate. null: nothing to cap (billing
   // off, the owner, no account). The full rate is the most a charge can be (the month's threshold only lowers it), so
   // a unit read to its ceiling is charged at most the balance.
+  // Less what units running now hold (THE HOLDS), so a unit starting beside them never counts their money as its own.
+  // `rate`: the multipliers the meter holds money at (services/usage.js meterFor).
   async function ceilingFor(accountId) {
     if (!enabled || !accountId || isOwner(accountId)) return null;
-    const account = await Account.findById(accountId, "balanceMicros marginMultiplier").lean();
+    const account = await Account.findById(accountId, "balanceMicros marginMultiplier holds").lean();
     if (!account) return null;
-    const room = toUsd(Math.max(0, (account.balanceMicros || 0) - floorMicros));
-    return { full: room / rateFor(account, false), bulk: room / rateFor(account, true) };
+    const held = (account.holds || []).reduce((s, h) => s + (h.m || 0), 0);
+    const room = toUsd(Math.max(0, (account.balanceMicros || 0) - floorMicros - held));
+    const rate = { full: rateFor(account, false), bulk: rateFor(account, true) };
+    return { full: room / rate.full, bulk: room / rate.bulk, rate };
   }
 
   // What this account pays for X work that costs `costUsd` (the quotes shown before a button is pressed). The owner
@@ -275,7 +311,7 @@ function createBalance({ enabled = false, ownerId = null, multiplier, markupCapM
 
   // A month's markup on `costUsd` of X's price at multiplier `m` (the platform's when omitted): the quotes' rule.
   const monthFee = (costUsd, m = multiplier) => monthMarkup(costUsd, m, toUsd(markupCapMicros), markupAfterRate);
-  return { enabled, isOwner, multiplierFor: (account) => multiplierFor(account, multiplier), markupCapUsd: toUsd(markupCapMicros), markupAfterPct: Math.round(markupAfterRate * 100), bulkPct: Math.round(bulkRate * 100), monthFee, chargeUnit, settle, paused, outOfRunway, ceilingFor, priceFor, affords, credit, takeBack, wake };
+  return { enabled, isOwner, multiplierFor: (account) => multiplierFor(account, multiplier), markupCapUsd: toUsd(markupCapMicros), markupAfterPct: Math.round(markupAfterRate * 100), bulkPct: Math.round(bulkRate * 100), monthFee, chargeUnit, settle, paused, outOfRunway, ceilingFor, hold, release, freeFor, priceFor, affords, credit, takeBack, wake };
 }
 
 // What metered() throws instead of starting a unit for an account out of runway. Callers recognise it by its code

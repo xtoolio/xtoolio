@@ -364,9 +364,32 @@ function constructEvent(rawBody, signature) {
   return getStripe().webhooks.constructEvent(rawBody, signature, config.stripe.webhookSecret);
 }
 
-// Route a verified event. Only xtoolio's own kinds are acted on; everything else is acknowledged and ignored.
+// A CHARGEBACK (`charge.dispute.created`): the payer's bank is pulling the money back, so the account loses what it
+// bought. The disputed amount comes off the balance (balance.takeBack, a "refund" row, once per dispute by its id),
+// which shuts THE GATE when it takes the balance to the floor or below (no more X work on money that's being taken
+// back), and auto-refill is switched off (an off-session charge to a card that disputes is the next dispute). Before
+// this nothing acted on a dispute: pay, spend it on X, dispute, and the operator lost the payment and Stripe's fee.
+// The account is ours only if a Stripe customer of ours paid it (a dispute carries no metadata of ours; Stripe sends
+// every event to every endpoint). A dispute won is NOT credited back here: grant it by hand (npm run credit), as
+// refunds are. → the move, or null.
+async function handleDispute(dispute) {
+  const chargeId = typeof dispute.charge === "string" ? dispute.charge : dispute.charge && dispute.charge.id;
+  if (!chargeId || !(dispute.amount > 0)) return null;
+  const charge = await getStripe().charges.retrieve(chargeId);
+  const customer = typeof charge.customer === "string" ? charge.customer : charge.customer && charge.customer.id;
+  const account = customer && (await Account.findOne({ stripeCustomerId: customer }, "username").lean());
+  if (!account) return null;
+  const moved = await balance.takeBack(account._id, dispute.amount * 10000, { ref: `dispute:${dispute.id}`, label: "Payment disputed" });
+  await Account.updateOne({ _id: account._id }, { $set: { "autoRefill.enabled": false, "autoRefill.disabledReason": "dispute" } });
+  if (moved) console.error(`[billing] DISPUTE ${dispute.id} on @${account.username}: $${(dispute.amount / 100).toFixed(2)} taken off the balance, auto-refill off`);
+  return moved;
+}
+
+// Route a verified event. Only xtoolio's own kinds are acted on (and a dispute on a customer of ours); everything else
+// is acknowledged and ignored.
 async function handleEvent(event) {
   const obj = event && event.data && event.data.object;
+  if (obj && event.type === "charge.dispute.created") return void (await handleDispute(obj));
   if (!obj || ![TOPUP, CARD].includes(kindOf(obj.metadata))) return;
   switch (event.type) {
     case "checkout.session.completed":
@@ -382,4 +405,4 @@ async function handleEvent(event) {
   }
 }
 
-module.exports = { ...balance, hasPaid, amountsFor, topupFor, ensureCustomer, forgetCustomer,createTopUpSession, settleTopupInvoice, handleTopUp, cardLabel, createCardSession, handleCardSetup, chargeRefill, refillUsdOf, sessionFor, settleReturn, statement, statementDays, receiptsFor, constructEvent, handleEvent, _setStripeForTests, TOPUP, CARD };
+module.exports = { ...balance, hasPaid, amountsFor, topupFor, ensureCustomer, forgetCustomer,createTopUpSession, settleTopupInvoice, handleTopUp, cardLabel, createCardSession, handleCardSetup, chargeRefill, refillUsdOf, sessionFor, settleReturn, statement, statementDays, receiptsFor, constructEvent, handleEvent, handleDispute, _setStripeForTests, TOPUP, CARD };

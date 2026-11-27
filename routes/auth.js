@@ -113,7 +113,7 @@ router.get("/auth/x/callback", async (req, res, next) => {
   // Not invited and not granted from THE WAITLIST (services/waitlist.js): they go on it (or stay), the token is revoked
   // (nothing is kept but who they are), and the waitlist page says so. The session holds only which row to show (no
   // account, no sign-in).
-  const invited = maySignIn(existing, me.username, me.id);
+  const invited = maySignIn(existing, me.id);
   let fromLine = !invited && (await waitlist.isGranted(me.id));
   // Not in any other way, but came through an INVITE LINK (services/invites.js): one of its places taken (atomically:
   // never past the limit), their waitlist row granted by that account, and they go on to make their account.

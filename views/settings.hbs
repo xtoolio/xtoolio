@@ -111,6 +111,11 @@
 {{#with invites}}
   <h2 class="section" id="invites">Invites</h2>
   <div class="panel no-cost">
+    {{#if locked}}
+    <div class="prow">
+      <div class="prow-text"><span class="prow-name">{{max}} invite links</span><span class="prow-hint">They come with your first top-up.</span></div>
+    </div>
+    {{else}}
     <div class="prow">
       <div class="prow-text"><span class="prow-name">Invites left <b class="prow-figure">{{left}} of {{max}}</b></span><span class="prow-hint">{{#if left}}Whoever signs in with your link skips the waitlist.{{else}}All used.{{/if}}</span></div>
       {{#if left}}<div class="prow-control"><code class="field copy-field">{{url}}</code><button type="button" class="btn copy-text" data-copy="{{url}}"><span class="when-idle">Copy</span><span class="when-copied">Copied</span></button></div>{{/if}}
@@ -120,6 +125,7 @@
         <div class="prow-text"><span class="prow-name">Joined</span></div>
         <div class="prow-control invite-faces">{{#each people}}{{> who-av person=this tip=true}}{{/each}}</div>
       </div>
+    {{/if}}
     {{/if}}
   </div>
 {{/with}}

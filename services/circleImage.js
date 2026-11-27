@@ -80,13 +80,30 @@ const SHAPES = {
   card: { w: 1200, h: 630, pad: 20, label: 24 },
 };
 
+// The pictures are fetched FETCHES_AT_ONCE at a time (up to 275 for a full 250 circle; all at once, each draw held
+// that many sockets and their bytes together). → `fn` of each item, in order
+const FETCHES_AT_ONCE = 16;
+async function mapLimited(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 // The PNG for `owner` ({ username, image, profile? }) and `people` (ranked, each { id, username, profile }), in `shape`,
 // drawn at the circle's size (services/circle.js SIZES: its geometry and rings).
 async function circlePng({ owner, people, size, siteDomain, siteX = null, shape = "card" }) {
   const { w, h, pad, label } = SHAPES[shape] || SHAPES.card;
   const { geo } = circle.sizeOf(size);
   const seats = circle.layout(people, size);
-  const pictures = await Promise.all([{ url: owner.image, ring: 0 }, ...seats.map((s) => ({ url: s.person.profile && s.person.profile.image, ring: s.ring }))].map(({ url, ring }) => (url ? fetchPicture(circle.pictureFor(url, ring, size)) : null)));
+  const wanted = [{ url: owner.image, ring: 0 }, ...seats.map((s) => ({ url: s.person.profile && s.person.profile.image, ring: s.ring }))];
+  const pictures = await mapLimited(wanted, FETCHES_AT_ONCE, ({ url, ring }) => (url ? fetchPicture(circle.pictureFor(url, ring, size)) : null));
   // The board as big as the shape allows, centred, at the circle's zoom (as the page's --z; the classic never zooms).
   const z = circle.zoomOf(seats.length, size);
   const scale = (Math.min(w, h) - 2 * pad) / geo.BOARD;

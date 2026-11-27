@@ -470,7 +470,7 @@ async function followMany(account, targets) {
       } catch (err) {
         const why = xFailure(err, `[follow-many] ${personId} for @${account.username} (${done.length} done)`);
         if (why !== "x-failed" || ++misses >= 3) {
-          n = why === "x-limit" ? "follow-all-limit" : why;
+          n = why === "x-limit" ? "follow-all-limit" : why === "out-of-balance" && done.length ? "followed-balance" : why;
           break;
         }
       }
@@ -516,7 +516,7 @@ async function likeEach(account, ids, meter, { onEach = () => {} } = {}) {
     } catch (err) {
       const why = xFailure(err, `[like-many] ${postId} for @${account.username} (${liked.length} done)`);
       if (why !== "x-failed" || ++misses >= 3) {
-        stop = why === "x-limit" ? "like-all-limit" : why;
+        stop = why === "x-limit" ? "like-all-limit" : why === "out-of-balance" && liked.length ? "liked-balance" : why;
         break;
       }
     }
@@ -615,6 +615,9 @@ const balanceText = async (account) => {
   return hb ? hbsHelpers.dollars(hb.usd) : null;
 };
 // A write X refused, as JSON: the notice, with X's own words when it said why (a reply too long, a duplicate).
+// Too much at once from one account (web.js THE ACCOUNT LIMIT, lib/inFlight.js): a press gets the toast, a page a
+// plain 429.
+const refuseBusy = (req, res) => (wantsJson(req) ? res.status(429).json({ ok: false, ...noticeFor("busy") }) : res.status(429).type("text").send(noticeFor("busy").text));
 const refusedJson = (res, n, err) => res.status(n === "x-limit" ? 429 : n === "out-of-balance" ? 402 : 502).json({ ok: false, ...noticeFor(n), ...(n === "x-failed" && err.detail && err.status >= 400 && err.status < 500 ? { text: `X said no: ${err.detail}` } : {}) });
 
 // A module's switch as partials/switch.hbs draws it (the off page): POST /modules/:key with on=1|0.
@@ -668,6 +671,7 @@ module.exports = {
   backTo,
   balanceText,
   refusedJson,
+  refuseBusy,
   pageSwitch,
   keepLiveSwitch,
 };
